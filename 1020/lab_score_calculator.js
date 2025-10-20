@@ -35,11 +35,27 @@ var s5 = toNumber(prompt('請輸入 演算法 成績：'));
 
 
 var text = '';
-if (s1 === null || s2 === null || s3 === null || s4 === null || s5 === null) {
+if (s1 === null || s2 === null || s3 === null) {
   text = '輸入有誤，請重新整理後再試。';
 } else {
-  var avg = (s1 + s2 + s3 + s4 + s5) / 5;
+  var avg = (s1 + s2 + s3) / 3;
   text = '姓名：' + name + '\n'
+       + '國文：' + s1 + '\n'
+       + '英文：' + s2 + '\n'
+       + '數學：' + s3 + '\n'
+       + '平均：' + avg.toFixed(2) + '\n'
+       + '等第：' + gradeFrom(avg);
+}
+
+console.log(text);
+document.getElementById('result').textContent = text;
+
+var extension = '';
+if (s1 === null || s2 === null || s3 === null || s4 === null || s5 === null) {
+  extension = '輸入有誤，請重新整理後再試。';
+} else {
+  var avg = (s1 + s2 + s3 + s4 + s5) / 5;
+  extension = '姓名：' + name + '\n'
        + '國文：' + s1 + '\n'
        + '英文：' + s2 + '\n'
        + '數學：' + s3 + '\n'
@@ -48,6 +64,5 @@ if (s1 === null || s2 === null || s3 === null || s4 === null || s5 === null) {
        + '平均：' + avg.toFixed(2) + '\n'
        + '等第：' + gradeFrom(avg);
 }
-
-console.log(text);
-document.getElementById('result').textContent = text;
+console.log(extension);
+document.getElementById('extension').textContent = extension;
