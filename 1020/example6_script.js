@@ -3,6 +3,7 @@
 
 var raw = prompt('請輸入多個數字（以逗號,分隔）：');
 var result = '';
+let min = 0, max = 0;
 
 if (!raw) {
   result = '未輸入資料';
@@ -28,9 +29,11 @@ if (!raw) {
            + '總和：' + sum + '\n'
            + '平均：' + avg;
   }
-  result += '\n最大值' + nums.max + '\n' + '最小值' + nums.min
+  max = Math.max(...nums);
+  min = Math.min(...nums);
 }
 
-
-
 document.getElementById('result').textContent = result;
+var extension = '';
+extension += '最大值：' + max + '\n' + '最小值：' + min;
+document.getElementById('extension').textContent = extension;
