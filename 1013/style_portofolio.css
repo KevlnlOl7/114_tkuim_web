@@ -8,12 +8,12 @@ html {
   font-weight: 700;
 }
 
-/* 首頁區（Hero） */
+
 .hero {
   min-height: 70vh;
   display: grid;
   place-items: center;
-  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  background: linear-gradient(180deg, #f3e8ff 0%, #ede7f6 50%, #ffffff 100%);
 }
 
 .hero h1 span {
@@ -80,4 +80,43 @@ footer a:hover {
   bottom: 16px;
   display: none;
   z-index: 1040;
+}
+
+/* 柔紫主題背景 */
+.bg-lavender-1 { background-color: #f3e8ff; } /* 淺薰衣草 */
+.bg-lavender-2 { background-color: #ede7f6; } /* 更淡的紫灰 */
+.bg-lavender-3 { background-color: #e1bee7; } /* 紫羅蘭淡紫 */
+.bg-lavender-4 { background-color: #f8f0ff; } /* 幾乎白但帶一點紫 */
+
+/* 紫系主色調強化（覆蓋 bootstrap 主色） */
+:root {
+  --bs-primary: #6f42c1;
+  --bs-primary-rgb: 111, 66, 193;
+}
+.btn-primary {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+}
+.btn-outline-primary {
+  color: var(--bs-primary);
+  border-color: var(--bs-primary);
+}
+.btn-outline-primary:hover {
+  background-color: var(--bs-primary);
+  color: #fff;
+}
+
+/* Footer 改成深紫 */
+footer.bg-dark {
+  background-color: #4a148c !important;
+}
+
+.alert-lavender {
+  background-color: #f3e8ff;   /* 淺薰衣草底 */
+  color: #4a148c;              /* 深紫文字 */
+  border-color: #e1bee7;       /* 紫羅蘭邊框 */
+}
+
+.alert-lavender .btn-close {
+  filter: invert(30%) sepia(20%) saturate(500%) hue-rotate(250deg);
 }

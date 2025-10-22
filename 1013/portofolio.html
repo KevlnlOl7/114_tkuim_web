@@ -1,337 +1,334 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>我的作品集</title>
-  <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-
-  <!-- Bootstrap Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
-
-  <!-- CSS -->
-  <link rel="stylesheet" href="style_portofolio.css">
-</head>
-<body>
-  <!-- 1. 導航列 -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow-sm">
-    <div class="container">
-      <a class="navbar-brand" href="#home">Kevin Chang</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-controls="navMenu" aria-expanded="false" aria-label="切換導覽">
-        <span class="navbar-toggler-icon"></span>
+   <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>我的作品集</title>
+      <!-- Bootstrap CSS -->
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+      <!-- Bootstrap Icons -->
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+      <!-- CSS -->
+      <link rel="stylesheet" href="style_portofolio.css">
+   </head>
+   <body>
+      <!-- 1. 導航列 -->
+      <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow-sm">
+         <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="#home">
+            <img src="Images/logo.png" alt="Logo" width="32" height="32" class="me-2 rounded-circle">
+            Kevin Chang
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-controls="navMenu" aria-expanded="false" aria-label="切換導覽">
+            <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navMenu">
+               <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                  <li class="nav-item"><a class="nav-link" href="#home">首頁</a></li>
+                  <li class="nav-item"><a class="nav-link" href="#about">關於我</a></li>
+                  <li class="nav-item"><a class="nav-link" href="#skills">技能</a></li>
+                  <li class="nav-item"><a class="nav-link" href="#portfolio">作品集</a></li>
+                  <li class="nav-item"><a class="nav-link" href="#contact">聯絡</a></li>
+               </ul>
+               <a class="btn btn-light btn-sm ms-lg-3" href="#" download>下載履歷</a>
+            </div>
+         </div>
+      </nav>
+      <div class="alert alert-lavender alert-dismissible fade show mb-4" role="alert">
+         <i class="bi bi-info-circle me-2"></i>
+         最新更新：新增Alert
+         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+      <!-- 2. Hero Section -->
+      <section id="home" class="hero py-5">
+         <div class="container">
+            <div class="row align-items-center g-4">
+               <div class="col-lg-7">
+                  <h1 class="display-5 fw-bold mb-3">
+                     嗨！我是 <span>張傢寧</span>
+                     <br class="d-none d-md-block" />
+                     一位平凡大學生
+                  </h1>
+                  <p class="lead text-secondary mb-4">就是個大學生，沒料大學生</p>
+                  <div class="d-flex gap-2">
+                     <a href="#portfolio" class="btn btn-primary btn-lg"><i class="bi bi-grid"></i> 看作品</a>
+                     <a href="#contact" class="btn btn-outline-primary btn-lg"><i class="bi bi-envelope"></i> 聯絡我</a>
+                  </div>
+               </div>
+               <div class="col-lg-5 text-center">
+                  <img src="Images/logo.png" alt="個人頭像" class="avatar img-fluid" />
+                  <div class="mt-3">
+                     <a class="btn btn-outline-secondary btn-sm me-2" href="https://github.com/KevlnlOl7" target="_blank" rel="noreferrer"><i class="bi bi-github"></i> GitHub</a>
+                     <a class="btn btn-outline-secondary btn-sm" href="https://www.linkedin.com/in/%E5%82%A2%E5%AF%A7-%E5%BC%B5-7946242b1/
+                        " target="_blank" rel="noreferrer"><i class="bi bi-linkedin"></i> LinkedIn</a>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </section>
+      <!-- 3. 關於我 -->
+      <section id="about" class="py-5 bg-lavender-1">
+         <div class="container">
+            <h2 class="text-center mb-5">關於我</h2>
+            <div class="row align-items-center justify-content-center g-4 text-center text-md-start">
+               <div class="col-md-4 text-center">
+                  <img src="Images/me.PNG" alt="個人照片" class="img-fluid rounded-circle about-photo shadow " />
+               </div>
+               <div class="col-md-6">
+                  <h3 class="h4 fw-bold">Hello, I'm Kevin</h3>
+                  <p class="text-secondary fs-5">An ordinary person, studying at Tamkang University. I enjoy LaTeX typesetting, programming, and sleeping.</p>
+                  <ul class="list-group list-group-flush mb-3">
+                     <li class="list-group-item"><i class="bi bi-trophy me-2"></i>家境清寒 / 靠清寒獎學金度過大學</li>
+                     <li class="list-group-item"><i class="bi bi-code-slash me-2"></i>Java / Python / LeTeX</li>
+                     <li class="list-group-item"><i class="bi bi-shield-lock me-2"></i>最近修資安學到很多有用的東西 - Burp Suite</li>
+                  </ul>
+                  <div class="d-flex gap-2">
+                     <span class="badge text-bg-primary skill-badge">Python</span>
+                     <span class="badge text-bg-secondary skill-badge">LaTeX</span>
+                     <span class="badge text-bg-warning text-dark skill-badge">Java</span>
+                     <span class="badge text-bg-success skill-badge">ScholarShip</span>
+                     <span class="badge text-bg-danger skill-badge">Patience</span>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </section>
+      <!-- 4. 技能展示 -->
+      <section id="skills" class="py-5 bg-lavender-2">
+         <div class="container">
+            <h2 class="text-center mb-5">我的技能</h2>
+            <div class="row g-4">
+               <div class="col-md-4">
+                  <div class="card h-100 shadow-sm">
+                     <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-braces"></i> 論文排版</h5>
+                        <p class="card-text text-secondary">使用 LaTeX 排出精美的書面作業 / 報告</p>
+                        <div class="mb-2">LaTeX</div>
+                        <div class="progress mb-3" role="progressbar" aria-label="LaTeX skill" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
+                           <div class="progress-bar" style="width: 100%">100%</div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div class="col-md-4">
+                  <div class="card h-100 shadow-sm">
+                     <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-graph-up-arrow"></i> 資料與機器學習</h5>
+                        <p class="card-text text-secondary">學過時序建模（ARIMA/LSTM/Transformer），能處理資料清理、特徵工程與評估。</p>
+                        <div class="mb-2">Python / Pandas</div>
+                        <div class="progress mb-3" role="progressbar" aria-label="Python skill" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100">
+                           <div class="progress-bar" style="width: 50%">50%</div>
+                        </div>
+                        <div class="mb-2">ML / DL</div>
+                        <div class="progress" role="progressbar" aria-label="ML skill" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100">
+                           <div class="progress-bar" style="width: 40%">40%</div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div class="col-md-4">
+                  <div class="card h-100 shadow-sm">
+                     <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-shield-check"></i> 協助學姊完成論文實驗</h5>
+                        <p class="card-text text-secondary">協助跑論文所需的實驗與記錄。</p>
+                        <div class="mb-2">Patience</div>
+                        <div class="progress mb-3" role="progressbar" aria-label="Patience" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
+                           <div class="progress-bar" style="width: 100%">100%</div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </section>
+      <!-- 5. 作品集 -->
+      <section id="portfolio" class="py-5 bg-lavender-3">
+         <div class="container">
+            <h2 class="text-center mb-5">作品集</h2>
+            <div class="row g-4">
+               <!-- Item 1 -->
+               <div class="col-md-6 col-lg-4">
+                  <div class="card h-100 shadow-sm portfolio-card">
+                     <img src="Images/ML.png" class="card-img-top img-fluid" alt="用機器學習預測發電量" />
+                     <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">用機器學習預測發電量</h5>
+                        <p class="card-text text-secondary">整合 Autoformer 與可視化，追蹤再生能源發電趨勢。</p>
+                        <div class="mt-auto d-flex gap-2 mb-2">
+                           <span class="badge text-bg-primary">Python</span>
+                           <span class="badge text-bg-secondary">Pandas</span>
+                        </div>
+                        <a href="#" class="btn btn-sm btn-outline-primary">查看詳情</a>
+                     </div>
+                  </div>
+               </div>
+               <!-- Item 2 -->
+               <div class="col-md-6 col-lg-4">
+                  <div class="card h-100 shadow-sm portfolio-card">
+                     <img src="Images/Thesis.png" class="card-img-top img-fluid" alt="幫學姊做論文排版" />
+                     <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">幫學姊做論文排版</h5>
+                        <p class="card-text text-secondary">謝謝她在我低潮的時候給我情緒價值。</p>
+                        <div class="mt-auto d-flex gap-2 mb-2">
+                           <span class="badge text-bg-success">LaTeX</span>
+                           <span class="badge text-bg-danger">Love</span>
+                        </div>
+                        <a href="#" class="btn btn-sm btn-outline-primary">查看詳情</a>
+                     </div>
+                  </div>
+               </div>
+               <!-- Item 3 -->
+               <div class="col-md-6 col-lg-4">
+                  <div class="card h-100 shadow-sm portfolio-card">
+                     <img src="Images/pog.png" class="card-img-top img-fluid" alt="DVWA - Brute Force" />
+                     <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">DVWA - Brute Force</h5>
+                        <p class="card-text text-secondary">資安菜鳥上路 - 我好想拿到flag.txt</p>
+                        <div class="mt-auto d-flex gap-2 mb-2">
+                           <span class="badge text-bg-dark">Kali</span>
+                           <span class="badge text-bg-danger">Burp Suite</span>
+                        </div>
+                        <a href="#" class="btn btn-sm btn-outline-primary">查看詳情</a>
+                     </div>
+                  </div>
+               </div>
+               <!-- Item 4 -->
+               <div class="col-md-6 col-lg-4">
+                  <div class="card h-100 shadow-sm portfolio-card">
+                     <img src="Images/SA.png" class="card-img-top img-fluid" alt="線上書店系統規劃" />
+                     <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">線上書店系統規劃</h5>
+                        <p class="card-text text-secondary">SAD 課程產出：用 UML 與 SRS 規劃系統。</p>
+                        <div class="mt-auto d-flex gap-2 mb-2">
+                           <span class="badge text-bg-info text-dark">UML</span>
+                           <span class="badge text-bg-success">LaTeX</span>
+                           <span class="badge text-bg-primary">ChatGPT</span>
+                        </div>
+                        <a href="#" class="btn btn-sm btn-outline-primary">查看詳情</a>
+                     </div>
+                  </div>
+               </div>
+               <!-- Item 5 -->
+               <div class="col-md-6 col-lg-4">
+                  <div class="card h-100 shadow-sm portfolio-card">
+                     <img src="Images/Golf.jpg" class="card-img-top img-fluid" alt="高爾夫紀錄" />
+                     <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">跟許方彥還有黃柏睿去打高爾夫</h5>
+                        <p class="card-text text-secondary">現在回想，那段時間真的過得滿快樂的</p>
+                        <div class="mt-auto d-flex gap-2 mb-2">
+                           <span class="badge text-bg-secondary">Golf</span>
+                           <span class="badge text-bg-primary">Happy</span>
+                        </div>
+                        <a href="#" class="btn btn-sm btn-outline-primary">查看詳情</a>
+                     </div>
+                  </div>
+               </div>
+               <!-- Item 6 -->
+               <div class="col-md-5 col-lg-4">
+                  <div class="card h-100 shadow-sm portfolio-card">
+                     <img src="Images/DSC112_PEIYU-600x900.jpg" class="card-img-top img-fluid" alt="鄭培宇老師" style="object-fit: cover; object-position: center top; height: 400px;" />
+                     <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">網路程式設計老師-鄭培宇</h5>
+                        <p class="card-text text-secondary">他很帥很認真，資管系草</p>
+                        <div class="mt-auto d-flex gap-2 mb-2">
+                           <span class="badge text-bg-success">Harvest</span>
+                           <span class="badge text-bg-dark">Handsome</span>
+                        </div>
+                        <a href="#" class="btn btn-sm btn-outline-primary">查看詳情</a>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </section>
+      <!-- 6. 聯絡表單 -->
+      <section id="contact" class="py-5 bg-lavender-4">
+         <div class="container">
+            <h2 class="text-center mb-5">聯絡我</h2>
+            <div class="row justify-content-center">
+               <div class="col-md-8 col-lg-6">
+                  <form class="needs-validation" novalidate>
+                     <div class="mb-3">
+                        <label for="name" class="form-label">姓名</label>
+                        <input type="text" class="form-control" id="name" placeholder="請輸入您的姓名" required />
+                        <div class="invalid-feedback">請填寫姓名。</div>
+                     </div>
+                     <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" placeholder="name@example.com" required />
+                        <div class="invalid-feedback">請填寫有效的 Email。</div>
+                     </div>
+                     <div class="mb-3">
+                        <label for="subject" class="form-label">主旨</label>
+                        <input type="text" class="form-control" id="subject" placeholder="想合作、詢問或回饋..." required />
+                        <div class="invalid-feedback">請填寫主旨。</div>
+                     </div>
+                     <div class="mb-3">
+                        <label for="message" class="form-label">訊息</label>
+                        <textarea class="form-control" id="message" rows="5" placeholder="請輸入訊息內容" required></textarea>
+                        <div class="invalid-feedback">請填寫訊息內容。</div>
+                     </div>
+                     <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" value="" id="agree" required />
+                        <label class="form-check-label" for="agree">我同意提供上述資訊以便聯繫</label>
+                        <div class="invalid-feedback">請勾選同意。</div>
+                     </div>
+                     <button class="btn btn-primary w-100" type="submit"><i class="bi bi-send"></i> 送出</button>
+                  </form>
+               </div>
+            </div>
+         </div>
+      </section>
+      <!-- 7. Footer -->
+      <footer class="bg-dark text-white text-center py-4">
+         <div class="container small">
+            <div class="mb-2">
+               <a class="me-3" href="mailto:412630153@o365.tku.edu.tw"><i class="bi bi-envelope"></i> Email</a>
+               <a class="me-3" href="#" target="_blank" rel="noreferrer"><i class="bi bi-github"></i> GitHub</a>
+               <a class="" href="#" target="_blank" rel="noreferrer"><i class="bi bi-linkedin"></i> LinkedIn</a>
+            </div>
+            <div>© <span id="year"></span> Kevin — All Rights Reserved.</div>
+         </div>
+      </footer>
+      <button id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="回到頂部">
+      <i class="bi bi-arrow-up"></i>
       </button>
-      <div class="collapse navbar-collapse" id="navMenu">
-        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-          <li class="nav-item"><a class="nav-link" href="#home">首頁</a></li>
-          <li class="nav-item"><a class="nav-link" href="#about">關於我</a></li>
-          <li class="nav-item"><a class="nav-link" href="#skills">技能</a></li>
-          <li class="nav-item"><a class="nav-link" href="#portfolio">作品集</a></li>
-          <li class="nav-item"><a class="nav-link" href="#contact">聯絡</a></li>
-        </ul>
-        <a class="btn btn-light btn-sm ms-lg-3" href="#" download>下載履歷</a>
-      </div>
-    </div>
-  </nav>
+      <!-- Bootstrap JavaScript -->
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+      <!-- 互動腳本：表單驗證、年份、自動高亮、回頂按鈕、平滑捲動 -->
+      <script>
+         // 動態年份
+         document.getElementById('year').textContent = new Date().getFullYear();
 
-  <!-- 2. Hero Section -->
-  <section id="home" class="hero py-5">
-    <div class="container">
-      <div class="row align-items-center g-4">
-        <div class="col-lg-7">
-          <h1 class="display-5 fw-bold mb-3">
-            嗨！我是 <span>張傢寧</span>
-            <br class="d-none d-md-block" />
-            一位平凡大學生
-          </h1>
-          <p class="lead text-secondary mb-4">就是個大學生，沒料大學生</p>
-          <div class="d-flex gap-2">
-            <a href="#portfolio" class="btn btn-primary btn-lg"><i class="bi bi-grid"></i> 看作品</a>
-            <a href="#contact" class="btn btn-outline-primary btn-lg"><i class="bi bi-envelope"></i> 聯絡我</a>
-          </div>
-        </div>
-        <div class="col-lg-5 text-center">
-          <img src="Images/logo.png" alt="個人頭像" class="avatar img-fluid" />
-          <div class="mt-3">
-            <a class="btn btn-outline-secondary btn-sm me-2" href="https://github.com/KevlnlOl7" target="_blank" rel="noreferrer"><i class="bi bi-github"></i> GitHub</a>
-            <a class="btn btn-outline-secondary btn-sm" href="https://www.linkedin.com/in/%E5%82%A2%E5%AF%A7-%E5%BC%B5-7946242b1/
-" target="_blank" rel="noreferrer"><i class="bi bi-linkedin"></i> LinkedIn</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+         // Bootstrap 客製化表單驗證
+         (() => {
+           const forms = document.querySelectorAll('.needs-validation');
+           Array.from(forms).forEach(form => {
+             form.addEventListener('submit', event => {
+               if (!form.checkValidity()) {
+                 event.preventDefault();
+                 event.stopPropagation();
+               }
+               form.classList.add('was-validated');
+             }, false);
+           });
+         })();
 
-  <!-- 3. 關於我 -->
-  <section id="about" class="py-5 bg-light">
-    <div class="container">
-      <h2 class="text-center mb-5">關於我</h2>
-    <div class="row align-items-center justify-content-center g-4 text-center text-md-start">
-  <div class="col-md-4 text-center">
-    <img src="Images/me.PNG" alt="個人照片" class="img-fluid rounded-circle about-photo shadow " />
-  </div>
-  <div class="col-md-6">
-    <h3 class="h4 fw-bold">Hello, I'm Kevin</h3>
-    <p class="text-secondary fs-5">An ordinary person, studying at Tamkang University. I enjoy LaTeX typesetting, programming, and sleeping.</p>
-          <ul class="list-group list-group-flush mb-3">
-            <li class="list-group-item"><i class="bi bi-trophy me-2"></i>家境清寒 / 靠清寒獎學金度過大學</li>
-            <li class="list-group-item"><i class="bi bi-code-slash me-2"></i>Java / Python / LeTeX</li>
-            <li class="list-group-item"><i class="bi bi-shield-lock me-2"></i>最近修資安學到很多有用的東西 - Burp Suite</li>
-          </ul>
-          <div class="d-flex gap-2">
-            <span class="badge text-bg-primary skill-badge">Python</span>
-            <span class="badge text-bg-secondary skill-badge">LaTeX</span>
-            <span class="badge text-bg-warning text-dark skill-badge">Java</span>
-            <span class="badge text-bg-success skill-badge">ScholarShip</span>
-            <span class="badge text-bg-danger skill-badge">Patience</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+         // 導覽列連結：自動收合
+         const navLinks = document.querySelectorAll('.navbar .nav-link');
+         const navCollapse = document.getElementById('navMenu');
+         navLinks.forEach(link => {
+           link.addEventListener('click', () => {
+             const bsCollapse = bootstrap.Collapse.getInstance(navCollapse);
+             if (bsCollapse) bsCollapse.hide();
+           });
+         });
 
-  <!-- 4. 技能展示 -->
-  <section id="skills" class="py-5">
-    <div class="container">
-      <h2 class="text-center mb-5">我的技能</h2>
-      <div class="row g-4">
-        <div class="col-md-4">
-          <div class="card h-100 shadow-sm">
-            <div class="card-body">
-              <h5 class="card-title"><i class="bi bi-braces"></i> 論文排版</h5>
-              <p class="card-text text-secondary">使用 LaTeX 排出精美的書面作業 / 報告</p>
-              <div class="mb-2">LaTeX</div>
-              <div class="progress mb-3" role="progressbar" aria-label="LaTeX skill" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
-                <div class="progress-bar" style="width: 100%">100%</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card h-100 shadow-sm">
-            <div class="card-body">
-              <h5 class="card-title"><i class="bi bi-graph-up-arrow"></i> 資料與機器學習</h5>
-              <p class="card-text text-secondary">學過時序建模（ARIMA/LSTM/Transformer），能處理資料清理、特徵工程與評估。</p>
-              <div class="mb-2">Python / Pandas</div>
-              <div class="progress mb-3" role="progressbar" aria-label="Python skill" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100">
-                <div class="progress-bar" style="width: 50%">50%</div>
-              </div>
-              <div class="mb-2">ML / DL</div>
-              <div class="progress" role="progressbar" aria-label="ML skill" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100">
-                <div class="progress-bar" style="width: 40%">40%</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card h-100 shadow-sm">
-            <div class="card-body">
-              <h5 class="card-title"><i class="bi bi-shield-check"></i> 協助學姊完成論文實驗</h5>
-              <p class="card-text text-secondary">協助跑論文所需的實驗與記錄。</p>
-              <div class="mb-2">Patience</div>
-              <div class="progress mb-3" role="progressbar" aria-label="Patience" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
-                <div class="progress-bar" style="width: 100%">100%</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 5. 作品集 -->
-  <section id="portfolio" class="py-5 bg-light">
-    <div class="container">
-      <h2 class="text-center mb-5">作品集</h2>
-      <div class="row g-4">
-        <!-- Item 1 -->
-        <div class="col-md-6 col-lg-4">
-          <div class="card h-100 shadow-sm portfolio-card">
-            <img src="Images/ML.png" class="card-img-top img-fluid" alt="用機器學習預測發電量" />
-            <div class="card-body d-flex flex-column">
-              <h5 class="card-title">用機器學習預測發電量</h5>
-              <p class="card-text text-secondary">整合 Autoformer 與可視化，追蹤再生能源發電趨勢。</p>
-              <div class="mt-auto d-flex gap-2 mb-2">
-                <span class="badge text-bg-primary">Python</span>
-                <span class="badge text-bg-secondary">Pandas</span>
-              </div>
-              <a href="#" class="btn btn-sm btn-outline-primary">查看詳情</a>
-            </div>
-          </div>
-        </div>
-        <!-- Item 2 -->
-        <div class="col-md-6 col-lg-4">
-          <div class="card h-100 shadow-sm portfolio-card">
-            <img src="Images/Thesis.png" class="card-img-top img-fluid" alt="幫學姊做論文排版" />
-            <div class="card-body d-flex flex-column">
-              <h5 class="card-title">幫學姊做論文排版</h5>
-              <p class="card-text text-secondary">謝謝她在我低潮的時候給我情緒價值。</p>
-              <div class="mt-auto d-flex gap-2 mb-2">
-                <span class="badge text-bg-success">LaTeX</span>
-                <span class="badge text-bg-danger">Love</span>
-              </div>
-              <a href="#" class="btn btn-sm btn-outline-primary">查看詳情</a>
-            </div>
-          </div>
-        </div>
-        <!-- Item 3 -->
-        <div class="col-md-6 col-lg-4">
-          <div class="card h-100 shadow-sm portfolio-card">
-            <img src="Images/pog.png" class="card-img-top img-fluid" alt="DVWA - Brute Force" />
-            <div class="card-body d-flex flex-column">
-              <h5 class="card-title">DVWA - Brute Force</h5>
-              <p class="card-text text-secondary">資安菜鳥上路 - 我好想拿到flag.txt</p>
-              <div class="mt-auto d-flex gap-2 mb-2">
-                <span class="badge text-bg-dark">Kali</span>
-                <span class="badge text-bg-danger">Burp Suite</span>
-              </div>
-              <a href="#" class="btn btn-sm btn-outline-primary">查看詳情</a>
-            </div>
-          </div>
-        </div>
-        <!-- Item 4 -->
-        <div class="col-md-6 col-lg-4">
-          <div class="card h-100 shadow-sm portfolio-card">
-            <img src="Images/SA.png" class="card-img-top img-fluid" alt="線上書店系統規劃" />
-            <div class="card-body d-flex flex-column">
-              <h5 class="card-title">線上書店系統規劃</h5>
-              <p class="card-text text-secondary">SAD 課程產出：用 UML 與 SRS 規劃系統。</p>
-              <div class="mt-auto d-flex gap-2 mb-2">
-                <span class="badge text-bg-info text-dark">UML</span>
-                <span class="badge text-bg-success">LaTeX</span>
-                <span class="badge text-bg-primary">ChatGPT</span>
-              </div>
-              <a href="#" class="btn btn-sm btn-outline-primary">查看詳情</a>
-            </div>
-          </div>
-        </div>
-        <!-- Item 5 -->
-        <div class="col-md-6 col-lg-4">
-          <div class="card h-100 shadow-sm portfolio-card">
-            <img src="Images/Golf.jpg" class="card-img-top img-fluid" alt="高爾夫紀錄" />
-            <div class="card-body d-flex flex-column">
-              <h5 class="card-title">跟許方彥還有黃柏睿去打高爾夫</h5>
-              <p class="card-text text-secondary">現在回想，那段時間真的過得滿快樂的</p>
-              <div class="mt-auto d-flex gap-2 mb-2">
-                <span class="badge text-bg-secondary">Golf</span>
-                <span class="badge text-bg-primary">Happy</span>
-              </div>
-              <a href="#" class="btn btn-sm btn-outline-primary">查看詳情</a>
-            </div>
-          </div>
-        </div>
-        <!-- Item 6 -->
-        <div class="col-md-5 col-lg-4">
-          <div class="card h-100 shadow-sm portfolio-card">
-            <img src="Images/DSC112_PEIYU-600x900.jpg" class="card-img-top img-fluid" alt="鄭培宇老師" style="object-fit: cover; object-position: center top; height: 400px;" />
-            <div class="card-body d-flex flex-column">
-              <h5 class="card-title">網路程式設計老師-鄭培宇</h5>
-              <p class="card-text text-secondary">他很帥很認真，資管系草</p>
-              <div class="mt-auto d-flex gap-2 mb-2">
-                <span class="badge text-bg-success">Harvest</span>
-                <span class="badge text-bg-dark">Handsome</span>
-              </div>
-              <a href="#" class="btn btn-sm btn-outline-primary">查看詳情</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 6. 聯絡表單 -->
-  <section id="contact" class="py-5">
-    <div class="container">
-      <h2 class="text-center mb-5">聯絡我</h2>
-      <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-          <form class="needs-validation" novalidate>
-            <div class="mb-3">
-              <label for="name" class="form-label">姓名</label>
-              <input type="text" class="form-control" id="name" placeholder="請輸入您的姓名" required />
-              <div class="invalid-feedback">請填寫姓名。</div>
-            </div>
-            <div class="mb-3">
-              <label for="email" class="form-label">Email</label>
-              <input type="email" class="form-control" id="email" placeholder="name@example.com" required />
-              <div class="invalid-feedback">請填寫有效的 Email。</div>
-            </div>
-            <div class="mb-3">
-              <label for="subject" class="form-label">主旨</label>
-              <input type="text" class="form-control" id="subject" placeholder="想合作、詢問或回饋..." required />
-              <div class="invalid-feedback">請填寫主旨。</div>
-            </div>
-            <div class="mb-3">
-              <label for="message" class="form-label">訊息</label>
-              <textarea class="form-control" id="message" rows="5" placeholder="請輸入訊息內容" required></textarea>
-              <div class="invalid-feedback">請填寫訊息內容。</div>
-            </div>
-            <div class="form-check mb-3">
-              <input class="form-check-input" type="checkbox" value="" id="agree" required />
-              <label class="form-check-label" for="agree">我同意提供上述資訊以便聯繫</label>
-              <div class="invalid-feedback">請勾選同意。</div>
-            </div>
-            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-send"></i> 送出</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 7. Footer -->
-  <footer class="bg-dark text-white text-center py-4">
-    <div class="container small">
-      <div class="mb-2">
-        <a class="me-3" href="mailto:412630153@o365.tku.edu.tw"><i class="bi bi-envelope"></i> Email</a>
-        <a class="me-3" href="#" target="_blank" rel="noreferrer"><i class="bi bi-github"></i> GitHub</a>
-        <a class="" href="#" target="_blank" rel="noreferrer"><i class="bi bi-linkedin"></i> LinkedIn</a>
-      </div>
-      <div>© <span id="year"></span> Kevin — All Rights Reserved.</div>
-    </div>
-  </footer>
-
-  <button id="backToTop" class="btn btn-primary rounded-circle back-to-top" aria-label="回到頂部">
-    <i class="bi bi-arrow-up"></i>
-  </button>
-
-  <!-- Bootstrap JavaScript -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-  <!-- 互動腳本：表單驗證、年份、自動高亮、回頂按鈕、平滑捲動 -->
-  <script>
-    // 動態年份
-    document.getElementById('year').textContent = new Date().getFullYear();
-
-    // Bootstrap 客製化表單驗證
-    (() => {
-      const forms = document.querySelectorAll('.needs-validation');
-      Array.from(forms).forEach(form => {
-        form.addEventListener('submit', event => {
-          if (!form.checkValidity()) {
-            event.preventDefault();
-            event.stopPropagation();
-          }
-          form.classList.add('was-validated');
-        }, false);
-      });
-    })();
-
-    // 導覽列連結：自動收合
-    const navLinks = document.querySelectorAll('.navbar .nav-link');
-    const navCollapse = document.getElementById('navMenu');
-    navLinks.forEach(link => {
-      link.addEventListener('click', () => {
-        const bsCollapse = bootstrap.Collapse.getInstance(navCollapse);
-        if (bsCollapse) bsCollapse.hide();
-      });
-    });
-
-    // 回到頂部按鈕
-    const backToTop = document.getElementById('backToTop');
-    window.addEventListener('scroll', () => {
-      backToTop.style.display = window.scrollY > 400 ? 'inline-flex' : 'none';
-    });
-    backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-  </script>
-</body>
+         // 回到頂部按鈕
+         const backToTop = document.getElementById('backToTop');
+         window.addEventListener('scroll', () => {
+           backToTop.style.display = window.scrollY > 400 ? 'inline-flex' : 'none';
+         });
+         backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+      </script>
+   </body>
 </html>
