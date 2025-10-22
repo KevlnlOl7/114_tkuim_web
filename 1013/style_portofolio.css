@@ -1,0 +1,83 @@
+html {
+  scroll-behavior: smooth;
+}
+
+/* 導航列 */
+.navbar-brand {
+  letter-spacing: .5px;
+  font-weight: 700;
+}
+
+/* 首頁區（Hero） */
+.hero {
+  min-height: 70vh;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.hero h1 span {
+  background: linear-gradient(90deg, #0d6efd 0%, #6f42c1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 個人頭像（首頁） */
+.avatar {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: 45% 30%;
+  box-shadow: 0 10px 25px rgba(13, 110, 253, .25);
+}
+
+/* 關於我區塊照片（圓形顯示） */
+.about-photo {
+  width: 220px;
+  height: 220px !important; /* 加!important 可以避免被 .img-fluid 的 height:auto 蓋掉 */
+  border-radius: 50%;
+  object-fit: cover;         /* 重點：填滿圓形 */
+  object-position: 50% 35%;  /* 微調臉的位置 */
+  display: block;
+  margin: 0 auto;            /* 置中 */
+}
+
+/* 技能徽章 */
+.skill-badge {
+  font-size: .85rem;
+}
+
+/* 作品集卡片 */
+.portfolio-card img {
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.portfolio-card {
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+
+.portfolio-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, .1);
+}
+
+/* Footer */
+footer a {
+  color: #adb5bd;
+}
+
+footer a:hover {
+  color: #fff;
+}
+
+/* 回到頂部按鈕 */
+.back-to-top {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: none;
+  z-index: 1040;
+}
