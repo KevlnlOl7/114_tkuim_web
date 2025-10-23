@@ -1,4 +1,4 @@
-var bingo = Math.floor(Math.random() * 100 + 1)
+var bingo = Math.floor(Math.random() * 100 + 1);
 var guess = prompt("來猜數字 ( 1 ~ 100 )！"+bingo);
 var cnt = 1;
 var lowerBoundary = 0, upperBoundary = 100;
