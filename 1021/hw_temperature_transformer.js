@@ -21,13 +21,13 @@ var unit = prompt("請輸入欲轉換單位\n若想攝氏轉華氏請填入 C\n�
 var degree = prompt("請輸入溫度");
 var text = '';
 if(!unit && !degree){
-    text = '請輸入溫度以及單位！'
+    text = '請輸入溫度以及單位！';
 }else if (!unit){
     text = '請輸入溫度單位！';
 }else if (isNaN(degree)){
     text = '請輸入數字！';
 }else{
-    text = transformer(unit, degree)
+    text = transformer(unit, degree);
 }
 
-ㄊdocument.getElementById("result").textContent = text
+ㄊdocument.getElementById("result").textContent = text;
