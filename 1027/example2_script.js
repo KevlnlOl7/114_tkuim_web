@@ -24,7 +24,7 @@ function showValidity(input) {
 
 function phoneValidate(){ // 從example3.js偷來的方法
   const value = phone.value.trim();
-  const regexPhone = /^09[0-9]{8}$/.test(value); // 電話的regex 檢查是否符合規則用，test.value()很重要
+  const regexPhone = /^09[0-9]{8}$/.test(value); // 電話的regex 檢查是否符合規則用，test.value()很重要g
   let msg = "";
   if(!value){
     msg = "請輸入電話號碼，以 09 開頭共十碼";

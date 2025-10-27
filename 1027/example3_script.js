@@ -13,7 +13,7 @@ function validatePassword() {
   const value = password.value.trim();
   const hasLetter = /[A-Za-z]/.test(value);
   const hasNumber = /\d/.test(value);
-  const hasSymbol = /[(){}\[\]<>\+\-\*\/\?,\.:\;"'_\\|~`!@#$%^&=]/.test(value);
+  const hasSymbol = /[(){}\[\]<>\+\-\*\/\?,\.:\;"'_\\|~`!@#$%^&=]/.test(value); // 新增特殊符號的regex，阿老師有它的命名方式我這題就跟著
   let message = '';
 
   if (!value) {
