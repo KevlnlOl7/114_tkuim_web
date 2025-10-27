@@ -22,11 +22,11 @@ function showValidity(input) {
 
 function phoneValidate(){ // 從example3.js偷來的方法
   const value = phone.value.trim();
-  const regxPhone = /^09[0-9]{8}$/.test(value); 
+  const regexPhone = /^09[0-9]{8}$/.test(value); // 電話的regex 檢查是否符合規則用
   let msg = "";
   if(!value){
     msg = "請輸入電話號碼，以 09 開頭共十碼";
-  }else if (value && !regxPhone){
+  }else if (value && !regexPhone){
     msg = "電話號碼需以 09 開頭共十碼";
   }
   phone.setCustomValidity(msg);
@@ -36,11 +36,11 @@ function phoneValidate(){ // 從example3.js偷來的方法
 
 function emailValidate(){ // 從上面偷來的方法
   const value = email.value.trim();
-  const regxMail = /^[A-Za-z0-9._%+-]+@o365.tku.edu.tw$/.test(value);
+  const regexMail = /^[A-Za-z0-9._%+-]+@o365.tku.edu.tw$/.test(value); // email regex 檢查是否符合規則用
   let msg = "";
   if(!value){
     msg = "請輸入 Email ，並以 @o365.tku.edu.tw 結尾";
-  }else if (value && !regxMail){
+  }else if (value && !regexMail){
     msg = "Email 請以 @o365.tku.edu.tw 結尾";
   }
   email.setCustomValidity(msg);
