@@ -53,3 +53,5 @@ form.addEventListener('input', (event) => {
     target.classList.remove('is-invalid');
   }
 });
+
+// 要做出一個功能，點擊隱私條款時，會跳出一個框框，顯示 這個是隱私條款，且上面會有一個選取欄，顯示我同意 / 我不同意，確認勾選後，才可進行送出的動作
