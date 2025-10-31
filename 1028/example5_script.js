@@ -4,6 +4,13 @@
 const form = document.getElementById('full-form');
 const submitBtn = document.getElementById('submitBtn');
 const resetBtn = document.getElementById('resetBtn');
+// 為了隱私權條款新增的const
+const agreeCheckbox = document.getElementById('agree');
+const privacyModalEl = document.getElementById('privacyModal');
+const privacyConfirmBtn = document.getElementById('privacyConfirm');
+const privacyRadios = privacyModalEl.querySelectorAll('input[name="privacyChoice"]');
+const privacyModal = new bootstrap.Modal(privacyModalEl);
+
 
 function validateAllInputs(formElement) {
   let firstInvalid = null;
@@ -54,4 +61,34 @@ form.addEventListener('input', (event) => {
   }
 });
 
-// 要做出一個功能，點擊隱私條款時，會跳出一個框框，顯示 這個是隱私條款，且上面會有一個選取欄，顯示我同意 / 我不同意，確認勾選後，才可進行送出的動作
+// 點擊頁面就會跳出隱私權條款的 frame
+agreeCheckbox.addEventListener('click', (event) => {
+  
+  event.preventDefault();
+  
+  privacyRadios.forEach(r => r.checked = false);
+  privacyConfirmBtn.disabled = true;
+  // 打開條款
+  privacyModal.show();
+});
+
+// 在 frame 裡選「我同意」才啟用確認鈕
+privacyModalEl.addEventListener('change', (e) => {
+  if (e.target.name === 'privacyChoice') {
+    privacyConfirmBtn.disabled = (e.target.value !== 'agree');
+  }
+});
+
+// 按下「確認」
+privacyConfirmBtn.addEventListener('click', () => {
+  const chosen = Array.from(privacyRadios).find(r => r.checked)?.value;
+  if (chosen === 'agree') {
+    // 這裡才真的勾起 checkbox
+    agreeCheckbox.checked = true;
+    agreeCheckbox.classList.remove('is-invalid');
+  } else {
+    // 選不同意就保持沒勾，使用者就是要給我勾，我才讓你使用我的服務
+    agreeCheckbox.checked = false;
+  }
+  privacyModal.hide();
+});

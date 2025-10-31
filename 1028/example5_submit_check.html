@@ -34,8 +34,9 @@
       </div>
       <div class="form-check mt-3">
         <input id="agree" class="form-check-input" type="checkbox" required>
-        <label class="form-check-label" for="agree">我已閱讀並同意隱私權條款</label>
-        
+        <label class="form-check-label" for="agree">
+          我已閱讀並同意隱私權條款
+        </label>
         <div class="invalid-feedback">須同意條款才能送出。</div>
       </div>
       <div class="mt-4">
@@ -44,6 +45,30 @@
       </div>
     </form>
   </div>
+  <div class="modal fade" id="privacyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">隱私權條款</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+        </div>
+        <div class="modal-body">
+          <p>這個是隱私條款。</p>
+          <div class="form-check mt-3">
+            <input class="form-check-input" type="radio" name="privacyChoice" id="pcAgree" value="agree">
+            <label class="form-check-label" for="pcAgree">我同意</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="privacyChoice" id="pcDisagree" value="disagree">
+            <label class="form-check-label" for="pcDisagree">我不同意</label>
+          </div>
+          </div>
+          <div class="modal-footer">
+            <button id="privacyConfirm" type="button" class="btn btn-primary" disabled>確認</button>
+          </div>
+        </div>
+      </div>
+    </div>
   <script src="example5_script.js"></script>
 </body>
 </html>
