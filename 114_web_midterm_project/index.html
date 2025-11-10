@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>即時天氣預報 App</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+<body>
+
+    <header>
+        <h1>即時天氣預報 App</h1>
+    </header>
+
+    <main>
+        <form id="search-form">
+            <label for="city-input">輸入城市名稱：</label>
+            <div class="input-group">
+                <select id="language-select">
+                    <option value="zh-TW" selected>中文 (繁體)</option>
+                    <option value="en">English</option>
+                </select>
+                <input type="text" id="city-input" placeholder="例如: 台北 或 London" required>
+            </div>
+            <button type="submit">搜尋</button>
+        </form>
+
+        <div id="feedback-display"></div>
+
+        <section id="city-image-container">
+            </section>
+
+        <div id="weather-details">
+            <section id="current-weather-container">
+                </section>
+            
+            <div id="forecast-wrapper">
+                <hr class="desktop-hr">
+                <h2>未來 7 天預報</h2>
+                <section id="forecast-container">
+                    </section>
+            </div>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>天氣資料來源： <a href="https://open-meteo.com/" target="_blank">Open-Meteo.com</a> | 圖片來源： <a href="https://unsplash.com/" target="_blank">Unsplash</a></p>
+    </footer>
+
+</body>
+</html>
