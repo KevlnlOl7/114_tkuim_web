@@ -1,0 +1,353 @@
+/* ==================== 響應式設計（修正版）==================== */
+
+/* 大螢幕 (>1024px) - 彈窗可用 */
+@media (min-width: 1025px) {
+    .aqi-container {
+        padding: 2rem;
+    }
+
+    .aqi-content {
+        display: flex;
+        gap: 2rem;
+    }
+
+    .aqi-main-card {
+        flex: 0 0 280px;
+    }
+
+    .aqi-pollutants {
+        flex: 1;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.2rem;
+    }
+}
+
+@media (min-width: 1025px) and (max-width: 1200px) {
+    .aqi-content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .aqi-main-card {
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+    .aqi-pollutants {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* 平板 + 手機 (≤1024px) */
+@media (max-width: 1024px) {
+    .forecast-container {
+        padding: 1.5rem;
+    }
+
+    .forecast-title {
+        font-size: 1.5rem;
+    }
+
+    .forecast-cards {
+        display: flex;
+        gap: 0.6rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding-bottom: 0.5rem;
+    }
+
+    .forecast-card {
+        flex: 0 0 auto;
+        width: 110px;
+        padding: 1rem 0.6rem;
+        scroll-snap-align: center;
+        cursor: pointer;
+        position: relative;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s;
+        background: white;
+        border-radius: 12px;
+    }
+
+    [data-theme="dark"] .forecast-card {
+        background: #16213e;
+    }
+
+    .forecast-card:active {
+        transform: scale(0.95);
+    }
+
+    .forecast-icon {
+        width: 55px;
+        height: 55px;
+    }
+
+    .forecast-temp {
+        font-size: 1.4rem;
+    }
+
+    .forecast-desc {
+        font-size: 0.85rem;
+    }
+
+    /* AQI */
+    .aqi-container {
+        padding: 1rem;
+    }
+
+    .aqi-title {
+        font-size: 1.5rem;
+    }
+
+    .aqi-content {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .aqi-main-card {
+        width: 100%;
+        max-width: 350px;
+        margin: 0 auto;
+        padding: 3rem;
+    }
+
+    .aqi-circle {
+        width: 200px;
+        height: 200px;
+    }
+
+    .aqi-value {
+        font-size: 3rem;
+    }
+
+    .aqi-status {
+        font-size: 1.3rem;
+        padding: 1.5rem;
+    }
+
+    .aqi-pollutants {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1rem;
+    }
+
+    .pollutant-card {
+        padding: 1rem;
+        gap: 2rem;
+        min-width: 0;
+    }
+
+    .pollutant-icon {
+        width: 45px;
+        height: 45px;
+        flex-shrink: 0;
+    }
+
+    .pollutant-icon i {
+        font-size: 1.3rem;
+    }
+
+    .pollutant-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .pollutant-name {
+        font-size: 0.85rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .pollutant-value {
+        font-size: 1.15rem;
+    }
+}
+
+/* 特殊尺寸：iPad Pro 縱向 (850px - 950px) */
+@media (min-width: 850px) and (max-width: 950px) {
+    .aqi-circle {
+        width: 200px;
+        height: 200px;
+    }
+
+    .aqi-value {
+        font-size: 2.6rem;
+    }
+    .pollutant-card {
+        padding: 3rem;
+        gap: 2rem;
+        min-width: 0;
+    }
+}
+
+/* 標準平板 (768px - 849px, 951px - 1024px) */
+@media (min-width: 768px) and (max-width: 849px),
+       (min-width: 951px) and (max-width: 1024px) {
+    .aqi-main-card {
+        max-width: 380px;
+    }
+
+    .aqi-pollutants {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .pollutant-card {
+        padding: 3rem;
+        gap: 2rem;
+        min-width: 0;
+    }
+}
+
+/* 手機 (≤430px) */
+@media (max-width: 431px) {
+    /* 五日預報 */
+    .forecast-card {
+        width: 90px;
+        padding: 0.8rem 0.5rem;
+    }
+
+    .forecast-icon {
+        width: 50px;
+        height: 50px;
+    }
+
+    .forecast-temp {
+        font-size: 1.2rem;
+    }
+
+    /* 彈窗 */
+    .modal-temp-main {
+        font-size: 3.5rem;
+    }
+
+    .modal-icon {
+        width: 100px;
+        height: 100px;
+    }
+
+    /* AQI */
+    .aqi-container {
+        padding: 2rem;
+    }
+
+    .aqi-title {
+        font-size: 1.3rem;
+    }
+
+    .aqi-main-card {
+        padding: 1rem;
+    }
+
+    .aqi-circle {
+        width: 200px;
+        height: 200px;
+    }
+
+    .aqi-value {
+        font-size: 2.0rem;
+    }
+
+    .aqi-status {
+        font-size: 1.2rem;
+        padding: 0.6rem 1.2rem;
+    }
+
+    .aqi-pollutants {
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+    }
+
+    .pollutant-card {
+        padding: 1rem;
+        gap: 2rem;
+        min-width: 0;
+    }
+
+    .pollutant-icon {
+        width: 15px;
+        height: 15px;
+    }
+
+    .pollutant-name {
+        font-size: 0.85rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .pollutant-value {
+        font-size: 1.15rem;
+    }
+
+    /* 意見表單 */
+    .feedback-container {
+        padding: 1.5rem 1rem;
+    }
+
+    .feedback-title {
+        font-size: 1.8rem;
+    }
+
+    .star-rating i {
+        font-size: 1.5rem;
+    }
+}
+
+/* 極小螢幕 (≤375px) */
+@media (max-width: 375px) {
+    .aqi-circle {
+        width: 160px;   /* 🔥 修正：寬高一致 */
+        height: 140px;  /* 🔥 修正：從 80px 改為 140px */
+    }
+
+    .aqi-value {
+        font-size: 2.2rem;
+    }
+
+    .pollutant-card {
+        padding: 0.8rem;
+    }
+
+    .pollutant-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .pollutant-name {
+        font-size: 0.8rem;
+    }
+
+    .pollutant-value {
+        font-size: 1rem;
+    }
+}
+
+/* 意見表單響應式 */
+@media (max-width: 768px) {
+    .feedback-section {
+        padding: 3rem 0;
+    }
+
+    .feedback-container {
+        padding: 2rem 1.5rem;
+    }
+
+    .feedback-title {
+        font-size: 2rem;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .btn-reset,
+    .btn-submit {
+        width: 100%;
+        justify-content: center;
+    }
+}
