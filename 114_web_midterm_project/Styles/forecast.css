@@ -51,7 +51,7 @@ Footer
     gap: 1.2rem;
 }
 
-/* 🔥 卡片樣式（可點擊）*/
+/* 卡片樣式（可點擊）*/
 .forecast-card {
     background: white;
     border-radius: 15px;
@@ -70,17 +70,6 @@ Footer
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
-.forecast-card::after {
-    content: '點擊查看詳情';
-    position: absolute;
-    bottom: 0.5rem;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.7rem;
-    color: var(--primary-color);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
 
 .forecast-card:hover {
     transform: translateY(-8px) scale(1.02);
@@ -199,7 +188,7 @@ Footer
     padding: 2rem;
     opacity: 0;
     visibility: hidden;
-    pointer-events: none; /* 🔥 關鍵：隱藏時不能點擊 */
+    pointer-events: none; /* 隱藏時不能點擊 */
     transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
@@ -208,13 +197,13 @@ Footer
     opacity: 1;
     visibility: visible;
     display: flex;
-    pointer-events: auto; /* 🔥 顯示時可以點擊 */
+    pointer-events: auto; /* 顯示時可以點擊 */
 }
 
 .forecast-modal-content {
     background: white;
     border-radius: 25px;
-    max-width: 600px;
+    max-width: 90vw;
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
@@ -222,6 +211,10 @@ Footer
     transform: scale(0.9) translateY(20px);
     transition: transform 0.3s ease;
     position: relative;
+    padding: 1.5rem 1.2rem; /* 內邊距適中 */
+    word-wrap: break-word; /* 自動換行 */
+    overflow-wrap: break-word;
+    box-sizing: border-box;
 }
 
 [data-theme="dark"] .forecast-modal-content {

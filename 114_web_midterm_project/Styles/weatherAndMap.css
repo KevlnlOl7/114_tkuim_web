@@ -312,3 +312,20 @@
 .map-wrapper iframe {
     border-radius: 15px;
 }
+
+#locate-btn {
+  margin: 1rem 0;
+  font-size: 1rem;
+  padding: 0.6rem 1.2rem;
+}
+
+#forecastChart {
+    width: 100% !important;     /* 讓canvas撐滿父容器 */
+    height: 120px;              /* 適當高度，可以自行調整 */
+    display: block;
+}
+#forecastChartContainer {
+    width: 100%;
+    max-width: 400px;           /* 外層容器的最大寬度，可依需求調整 */
+    margin: 0 auto;
+}

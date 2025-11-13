@@ -172,7 +172,33 @@ weatherForm.addEventListener('submit', function(e) {
     }
 });
 
+// ==================== 定位功能 ====================
+
+let currentCityForecasts = [];
+
+document.getElementById('locate-btn').addEventListener('click', () => {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      fetchWeatherAndForecast(pos.coords.latitude, pos.coords.longitude);
+    }, () => alert('定位失敗，請允許權限或手動輸入城市。'));
+  } else {
+    alert('不支援定位功能');
+  }
+});
+
 // ==================== 天氣查詢 ====================
+async function fetchWeatherByLatLon(lat, lon) {
+  try {
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_API_KEY}&units=metric&lang=zh_tw`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('無法取得定位天氣資料');
+    const data = await response.json();
+    displayWeather(data);
+  } catch(err) {
+    alert(err.message);
+  }
+}
+
 async function fetchWeather(city) {
     console.log('fetchWeather 被調用:', city); // Debug
 
@@ -462,94 +488,69 @@ function displayForecast(data) {
     // 移除舊彈窗，插入新彈窗
     document.querySelectorAll('.forecast-modal').forEach(m => m.remove());
     document.body.insertAdjacentHTML('beforeend', modals);
+    
+    currentCityForecasts = fiveDays.map(day => ({
+        dateLabel: new Date(day.dt * 1000).toLocaleDateString('zh-TW', {month:'numeric', day:'numeric'}),
+        temp: Math.round(day.main.temp)
+    }));
 
+    drawForecastChart(
+        fiveDays.map(day => new Date(day.dt * 1000).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })),
+        fiveDays.map(day => Math.round(day.main.temp))
+    );
     console.log('五日預報已顯示');
 }
 
-function attachForecastClickHandlers() {
-    // 只在手機版綁定
-    if (window.innerWidth >= 1068) return;
+// 繪製五日氣溫折線圖
+let chartInstance = null;
+function drawForecastChart(labels, temps) {
+  const minTemp = Math.min(...temps);
+  const maxTemp = Math.max(...temps);
+  const padding = 1;
 
-    const forecastCards = document.querySelectorAll('.forecast-card');
+  const canvas = document.getElementById('forecastChart');
+  if (!canvas) return;
 
-    forecastCards.forEach((card, index) => {
-        // 移除舊的事件監聽器（避免重複綁定）
-        const newCard = card.cloneNode(true);
-        card.parentNode.replaceChild(newCard, card);
+  const ctx = canvas.getContext('2d');
+  if (chartInstance) chartInstance.destroy();
 
-        // 🔥 綁定點擊事件到整個卡片
-        newCard.addEventListener('click', function(e) {
-            // 如果點擊的是關閉按鈕或背景遮罩，不要觸發
-            if (e.target.closest('.modal-close-btn') ||
-                e.target.classList.contains('forecast-modal-overlay')) {
-                return;
-            }
-
-            openForecastModal(index);
-        });
-
-        // 🔥 加入視覺回饋（點擊時縮小）
-        newCard.addEventListener('touchstart', function() {
-            this.style.transform = 'scale(0.95)';
-        });
-
-        newCard.addEventListener('touchend', function() {
-            this.style.transform = 'scale(1)';
-        });
-    });
-
-    console.log('已綁定', forecastCards.length, '個預報卡片點擊事件');
-}
-
-function openForecastModal(index) {
-    // 只在手機版啟用
-    if (window.innerWidth >= 768) return;
-
-    const modal = document.querySelector(`#forecastModal${index}`);
-    if (!modal) {
-        console.error('找不到彈窗:', index);
-        return;
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: '每日中午溫度(°C)',
+        data: temps,
+        borderColor: '#4A90E2',
+        backgroundColor: 'rgba(74, 144, 226, 0.1)',
+        fill: true,
+        tension: 0.1,
+        pointRadius: 1,
+        pointBackgroundColor: '#4A90E2'
+      }]
+    },
+    options: {
+        responsive: true,
+      scales: {
+        x: {
+        ticks: {
+            maxRotation: 30,   // 文字最大旋轉30度，降低寬度需求
+            minRotation: 0,
+            autoSkip: true,     // 自動跳過部份標籤避免過度擁擠
+            maxTicksLimit: 5   // 最多只顯示幾個標籤
+        }
+        },
+        y: {
+        beginAtZero: false,
+        min: minTemp - padding,
+        max: maxTemp + padding,
+        ticks: {
+            stepSize: 1
+        }
+        }}
     }
-
-    // 關閉其他開啟的彈窗
-    document.querySelectorAll('.forecast-modal').forEach(m => {
-        m.classList.remove('active');
-    });
-
-    // 開啟當前彈窗
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden'; // 防止背景滾動
-
-    console.log(`📊 開啟第 ${index + 1} 天預報詳情`);
+  });
 }
-
-function closeForecastModal(index) {
-    const modal = document.querySelector(`#forecastModal${index}`);
-    if (!modal) return;
-
-    modal.classList.remove('active');
-    document.body.style.overflow = ''; // 恢復滾動
-
-    console.log(`關閉第 ${index + 1} 天預報詳情`);
-}
-
-// ESC 鍵關閉彈窗
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        document.querySelectorAll('.forecast-modal.active').forEach(modal => {
-            modal.classList.remove('active');
-        });
-        document.body.style.overflow = '';
-    }
-});
-
-// 視窗大小改變時重新綁定
-window.addEventListener('resize', function() {
-    const forecastContainer = document.querySelector('#forecastCards');
-    if (forecastContainer && forecastContainer.children.length > 0) {
-        attachForecastClickHandlers();
-    }
-});
 
 // ==================== 空氣品質 ====================
 async function fetchAirQuality(lat, lon) {
@@ -727,12 +728,28 @@ function toggleTemperatureUnit(unit) {
     document.querySelector('#celsiusBtn').classList.toggle('active', unit === 'celsius');
     document.querySelector('#fahrenheitBtn').classList.toggle('active', unit === 'fahrenheit');
 
+    // 更新主溫度顯示
     const displayTemp = unit === 'fahrenheit' ? (currentTempCelsius * 9/5) + 32 : currentTempCelsius;
     const displayFeels = unit === 'fahrenheit' ? (currentFeelsLikeCelsius * 9/5) + 32 : currentFeelsLikeCelsius;
 
     document.querySelector('#temperature').textContent = Math.round(displayTemp);
     document.querySelector('.unit').textContent = unit === 'celsius' ? '°C' : '°F';
     document.querySelector('#feelsLike').textContent = `${Math.round(displayFeels)}${unit === 'celsius' ? '°C' : '°F'}`;
+
+    // 更新五日預報折線圖
+    if (currentCityForecasts && currentCityForecasts.length > 0) {
+        let temps;
+        if (unit === 'fahrenheit') {
+            temps = currentCityForecasts.map(day => (day.temp * 9/5) + 32);
+        } else {
+            temps = currentCityForecasts.map(day => day.temp);
+        }
+        console.log('更新折線圖溫度資料:', temps);
+        drawForecastChart(
+            currentCityForecasts.map(day => day.dateLabel),
+            temps
+        );
+    }
 }
 
 // ==================== 深色模式 ====================
