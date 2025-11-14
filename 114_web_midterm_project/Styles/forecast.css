@@ -1,18 +1,3 @@
-/* 結構
-全域變數和重置
-Header
-Hero 區塊
-天氣動畫
-搜尋表單
-天氣顯示
-地圖
-五日預報
-AQI
-Loading & About
-Footer
-動畫
-響應式（統一在最後）
-*/
 /* ==================== 五日預報 ==================== */
 .forecast-container {
     background: white;

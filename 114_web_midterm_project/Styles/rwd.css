@@ -20,6 +20,12 @@
         grid-template-columns: repeat(2, 1fr);
         gap: 1.2rem;
     }
+    .forecastChartContainer{
+        width: 100%;
+        max-width: 100vw;     /* 使用視窗寬度的90%，電腦螢幕會放大 */
+        margin: 0 auto;
+        min-width: 100px;    /* 下限避免太窄 */
+    }
 }
 
 @media (min-width: 1025px) and (max-width: 1200px) {

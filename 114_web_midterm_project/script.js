@@ -174,12 +174,11 @@ weatherForm.addEventListener('submit', function(e) {
 
 // ==================== 定位功能 ====================
 
-let currentCityForecasts = [];
-
 document.getElementById('locate-btn').addEventListener('click', () => {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(pos => {
-      fetchWeatherAndForecast(pos.coords.latitude, pos.coords.longitude);
+      fetchWeatherByLatLon(pos.coords.latitude, pos.coords.longitude);  // 用經緯度取得即時天氣
+      fetchForecast(pos.coords.latitude, pos.coords.longitude);          // 五日預報
     }, () => alert('定位失敗，請允許權限或手動輸入城市。'));
   } else {
     alert('不支援定位功能');
@@ -498,7 +497,11 @@ function displayForecast(data) {
         fiveDays.map(day => new Date(day.dt * 1000).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })),
         fiveDays.map(day => Math.round(day.main.temp))
     );
+    window.currentCityForecastsRaw = fiveDays;
+    renderForecastCardsAndModals(currentUnit); // 用正確單位首次渲染
+
     console.log('五日預報已顯示');
+
 }
 
 // 繪製五日氣溫折線圖
@@ -750,8 +753,125 @@ function toggleTemperatureUnit(unit) {
             temps
         );
     }
+    if (window.currentCityForecastsRaw) {
+        renderForecastCardsAndModals(unit);
+    }   
 }
 
+function renderForecastCardsAndModals(unit) {
+    const fiveDays = window.currentCityForecastsRaw;
+    let html = '';
+    let modals = '';
+
+    fiveDays.forEach((day, index) => {
+        // 溫度單位換算
+        const temp = Math.round(unit === 'fahrenheit'
+            ? (day.main.temp * 9/5 + 32)
+            : day.main.temp);
+        const tempMin = Math.round(unit === 'fahrenheit'
+            ? (day.main.temp_min * 9/5 + 32)
+            : day.main.temp_min);
+        const tempMax = Math.round(unit === 'fahrenheit'
+            ? (day.main.temp_max * 9/5 + 32)
+            : day.main.temp_max);
+        const feelsLike = Math.round(unit === 'fahrenheit'
+            ? (day.main.feels_like * 9/5 + 32)
+            : day.main.feels_like);
+
+        const date = new Date(day.dt * 1000);
+        const dayName = date.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', weekday: 'short' });
+        const iconUrl = `https://openweathermap.org/img/wn/${day.weather[0].icon}@2x.png`;
+        const desc = day.weather[0].description;
+        const humidity = day.main.humidity;
+        const pop = Math.round((day.pop || 0) * 100);
+        const windSpeed = day.wind ? day.wind.speed : 0;
+        const pressure = day.main.pressure;
+        const clouds = day.clouds ? day.clouds.all : 0;
+
+        // 預報小卡
+        html += `
+            <div class="forecast-card" onclick="document.getElementById('fm${index}').classList.add('show')">
+                <div class="forecast-date">${dayName}</div>
+                <img src="${iconUrl}" alt="${desc}" class="forecast-icon">
+                <div class="forecast-temp">${temp}°${unit === 'celsius' ? 'C' : 'F'}</div>
+                <div class="forecast-temp-range">
+                    <span class="temp-high">↑${tempMax}°</span>
+                    <span class="temp-low">↓${tempMin}°</span>
+                </div>
+                <div class="forecast-desc">${desc}</div>
+                <div class="forecast-extra">
+                    <div class="forecast-extra-item">
+                        <i class="fas fa-tint"></i>
+                        <span>${humidity}%</span>
+                    </div>
+                    <div class="forecast-extra-item">
+                        <i class="fas fa-umbrella"></i>
+                        <span>${pop}%</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Modal 詳細資訊
+        modals += `
+            <div class="forecast-modal" id="fm${index}" onclick="if(event.target.id=='fm${index}')this.classList.remove('show')">
+                <div class="forecast-modal-content">
+                    <button class="modal-close-btn" onclick="document.getElementById('fm${index}').classList.remove('show')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="modal-header">
+                        <h3 class="modal-date">${dayName}</h3>
+                        <img src="${iconUrl}" alt="${desc}" class="modal-icon">
+                    </div>
+                    <div class="modal-temp-section">
+                        <div class="modal-temp-main">${temp}°${unit === 'celsius' ? 'C' : 'F'}</div>
+                        <div class="modal-feels-like">體感 ${feelsLike}°${unit === 'celsius' ? 'C' : 'F'}</div>
+                        <div class="modal-desc">${desc}</div>
+                    </div>
+                    <div class="modal-temp-range">
+                        <div class="modal-temp-item high">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>最高溫</span>
+                            <strong>${tempMax}°</strong>
+                        </div>
+                        <div class="modal-temp-item low">
+                            <i class="fas fa-arrow-down"></i>
+                            <span>最低溫</span>
+                            <strong>${tempMin}°</strong>
+                        </div>
+                    </div>
+                    <div class="modal-details">
+                        <div class="modal-detail-item">
+                            <div class="modal-detail-icon"><i class="fas fa-tint"></i></div>
+                            <div class="modal-detail-info"><span>濕度</span><strong>${humidity}%</strong></div>
+                        </div>
+                        <div class="modal-detail-item">
+                            <div class="modal-detail-icon"><i class="fas fa-umbrella"></i></div>
+                            <div class="modal-detail-info"><span>降雨機率</span><strong>${pop}%</strong></div>
+                        </div>
+                        <div class="modal-detail-item">
+                            <div class="modal-detail-icon"><i class="fas fa-wind"></i></div>
+                            <div class="modal-detail-info"><span>風速</span><strong>${windSpeed} m/s</strong></div>
+                        </div>
+                        <div class="modal-detail-item">
+                            <div class="modal-detail-icon"><i class="fas fa-compress-alt"></i></div>
+                            <div class="modal-detail-info"><span>氣壓</span><strong>${pressure} hPa</strong></div>
+                        </div>
+                        <div class="modal-detail-item">
+                            <div class="modal-detail-icon"><i class="fas fa-cloud"></i></div>
+                            <div class="modal-detail-info"><span>雲量</span><strong>${clouds}%</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    document.querySelector('#forecastCards').innerHTML = html;
+    // 先移除舊 modal
+    document.querySelectorAll('.forecast-modal').forEach(m => m.remove());
+    document.body.insertAdjacentHTML('beforeend', modals);
+}
 // ==================== 深色模式 ====================
 function initDarkMode() {
     const savedTheme = localStorage.getItem('theme') || 'light';
@@ -796,6 +916,15 @@ document.querySelector('#clearHistoryBtn')?.addEventListener('click', function()
     if (confirm('確定要清除所有搜尋記錄嗎？')) {
         localStorage.removeItem('searchHistory');
         displayHistory();
+    }
+});
+
+document.querySelector('#clearFavoritesBtn')?.addEventListener('click', function() {
+    if (confirm('確定要清除所有收藏嗎？')) {
+        localStorage.removeItem('favorites');
+        // 更新顯示區域（清空列表、隱藏收藏區等）
+        document.querySelector('#favoritesList').innerHTML = '';
+        document.getElementById('favoritesSection').style.display = 'none';
     }
 });
 
@@ -928,8 +1057,8 @@ if (feedbackForm) {
 
         // 收集表單資料
         const formData = {
-            name: document.querySelector('#userName').value || '匿名',
-            email: document.querySelector('#userEmail').value || '未提供',
+            name: document.querySelector('#userName').value.trim() || '',
+            email: document.querySelector('#userEmail').value.trim() || '',
             type: feedbackType,
             rating: rating,
             message: message,
@@ -971,13 +1100,16 @@ if (feedbackForm) {
 function saveFeedback(data) {
     let feedbacks = JSON.parse(localStorage.getItem('feedbacks')) || [];
     feedbacks.push(data);
-    // 只保留最近 50 筆
     if (feedbacks.length > 50) {
         feedbacks = feedbacks.slice(-50);
     }
     localStorage.setItem('feedbacks', JSON.stringify(feedbacks));
+    console.log('LocalStorage feedbacks updated:', localStorage.getItem('feedbacks'));
     showTooltip('意見已送出！感謝您的回饋', 'success');
 }
+
+// F5 後自動用 localStorage 的資料回填表單
+
 
 // ==================== 頁面初始化 ====================
 window.addEventListener('load', function() {
