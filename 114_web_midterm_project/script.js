@@ -463,7 +463,7 @@ function displayForecast(data) {
     document.querySelectorAll('.forecast-modal').forEach(m => m.remove());
     document.body.insertAdjacentHTML('beforeend', modals);
 
-    console.log('五日預報已顯示');
+    console.log('日預報已顯示');
 }
 
 function attachForecastClickHandlers() {
