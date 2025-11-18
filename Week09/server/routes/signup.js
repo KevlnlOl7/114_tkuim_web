@@ -1,15 +1,11 @@
+// routes/signup.js
 import { Router } from 'express';
 import { nanoid } from 'nanoid';
-//加分挑戰（每項 +5）： 項目1 - 套用 zod 或 yup 做更完整的資料驗證。
 import { z } from 'zod';
-//加分挑戰： 項目2 - 將資料暫存於 JSON 檔案或 SQLite，並提供 GET /api/signup/:id 查詢。
 import * as db from '../../utils/db.js';
-
-
 const router = Router();
-const participants = [];
 
-// ✨ 使用 Zod 定義驗證 Schema
+// Zod schema
 const signupSchema = z.object({
   name: z.string().min(1, '姓名為必填'),
   email: z.string().email('Email 格式不正確'),
@@ -27,37 +23,23 @@ const signupSchema = z.object({
   path: ['confirmPassword']
 });
 
-// 作業要求：後端-2 GET /api/signup 回傳目前報名清單與總數。
+// 1️⃣ GET /api/signup - 查看所有報名（根路徑，放最前面）
 router.get('/', async (req, res, next) => {
   try {
+    console.log('查看所有報名');
     const participants = await db.getAllParticipants();
     res.json({ total: participants.length, data: participants });
   } catch (error) {
+    console.error('GET / error:', error);
     next(error);
   }
 });
 
-//加分挑戰： 項目2 - 將資料暫存於 JSON 檔案或 SQLite，並提供 GET /api/signup/:id 查詢。
-router.get('/:id', async (req, res, next) => {
-  try {
-    const participant = await db.getParticipantById(req.params.id);
-    if (!participant) {
-      return res.status(404).json({ error: '找不到這位參與者' });
-    }
-
-    res.json({ participant });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// 作業要求：後端-1 POST /api/signup 驗證所有欄位，失敗時回傳 400 與錯誤訊息。
+// 2️⃣ POST /api/signup - 新增報名
 router.post('/', async (req, res, next) => {
   try {
-    // 記錄收到的資料（除錯用）
-    console.log('Received data:', req.body);
+    console.log('📥 收到 POST 請求');
 
-    // Zod 驗證
     const validated = signupSchema.parse(req.body);
 
     // 檢查重複
@@ -80,42 +62,58 @@ router.post('/', async (req, res, next) => {
     };
 
     await db.addParticipant(newParticipant);
-    console.log('報名成功:', newParticipant.email);
+    console.log('報名成功:', newParticipant.id);
 
     res.status(201).json({ message: '報名成功', participant: newParticipant });
 
   } catch (error) {
-    // Zod 驗證錯誤
     if (error instanceof z.ZodError) {
-      const errors = error.errors.map(e => ({
-        field: e.path.join('.'),
-        message: e.message
-      }));
-
-      console.log('Zod 驗證失敗:', errors);
-
-      // 回傳第一個錯誤訊息
-      return res.status(400).json({
-        error: errors[0]?.message || '資料驗證失敗'
-      });
+      const firstError = error.errors?.[0]?.message || '驗證失敗';
+      return res.status(400).json({ error: firstError });
     }
-
-    // 其他錯誤（檔案系統錯誤等）
-    console.error('Server Error:', error);
+    console.error('POST error:', error);
     next(error);
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+// 3️⃣ GET /api/signup/:id - 查詢單一參與者（動態路由放後面）
+router.get('/:id', async (req, res, next) => {
   try {
-    const removed = await db.deleteParticipant(req.params.id);
+    console.log('查詢 ID:', req.params.id);
 
-    if (!removed) {
+    const participant = await db.getParticipantById(req.params.id);
+
+    if (!participant) {
+      console.log('找不到 ID:', req.params.id);
       return res.status(404).json({ error: '找不到這位參與者' });
     }
 
-    res.json({ message: '已取消報名', participant: removed });
+    console.log('查詢成功:', participant.name);
+    res.json({ participant });
+
   } catch (error) {
+    console.error('GET /:id error:', error);
+    next(error);
+  }
+});
+
+// 4️⃣ DELETE /api/signup/:id - 刪除報名（動態路由放後面）
+router.delete('/:id', async (req, res, next) => {
+  try {
+    console.log('刪除 ID:', req.params.id);
+
+    const removed = await db.deleteParticipant(req.params.id);
+
+    if (!removed) {
+      console.log('找不到 ID:', req.params.id);
+      return res.status(404).json({ error: '找不到這位參與者' });
+    }
+
+    console.log('刪除成功:', removed.name);
+    res.json({ message: '已取消報名', participant: removed });
+
+  } catch (error) {
+    console.error('DELETE error:', error);
     next(error);
   }
 });
