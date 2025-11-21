@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>註冊帳號 · Purple UI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="page-bg"></div>
+
+  <main class="center-wrap">
+    <section class="signup-card">
+      <header class="card-head">
+        <div class="badge">Join us</div>
+        <h1>建立你的帳號</h1>
+        <p>請不要建立密碼庫有的密碼，會被爆破：)</p>
+      </header>
+
+      <form id="signupForm" novalidate>
+        <div class="field">
+          <label class="field-label" for="name">姓名</label>
+          <input id="name" name="name" type="text" class="field-input" required placeholder="請輸入姓名。例如：張帥哥" aria-describedby="nameErr">
+          <p class="field-error" id="nameErr">請輸入姓名</p>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="emailContact">Email</label>
+          <input id="emailContact" name="email" type="email" class="field-input" required placeholder="請輸入Email。例如：example@mail.com" aria-describedby="emailErr">
+          <p class="field-error" id="emailErr">請輸入正確的 Email</p>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="phone">手機</label>
+          <input
+            id="phone"
+            name="phone"
+            type="text"
+            class="field-input"
+            required
+            inputmode="numeric"
+            maxlength="10"
+            pattern="09[0-9]{8}"
+            placeholder="請輸入 10 碼手機，例如 0912345678"
+            aria-describedby="phoneErr"
+          >
+          <p class="field-error" id="phoneErr">請輸入正確的手機號碼（09 開頭，共 10 碼）</p>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="password">設定密碼</label>
+
+          <div class="password-wrapper">
+            <div class="pw-input-box">
+              <input id="password" name="password" type="password" class="field-input" required minlength="8" placeholder="請輸入密碼" aria-describedby="pwdErr">
+              <button type="button" class="pw-toggle" id="pwToggle" aria-label="顯示密碼">👁</button>
+            </div>
+
+            <div class="pw-mascot" id="pwMascot" aria-hidden="true">
+              <div class="mascot-face">
+                <div class="mascot-eye left"><span class="pupil"></span></div>
+                <div class="mascot-eye right"><span class="pupil"></span></div>
+              </div>
+            </div>
+          </div>
+
+          <p class="field-error" id="pwdErr">請輸入密碼</p>
+
+          <div class="pwd-meter">
+            <div class="pwd-bar" id="pwdBar"></div>
+          </div>
+          <p class="pwd-strength" id="pwdStrength">密碼強度：</p>
+
+          <ul class="pwd-checklist" id="pwdChecklist">
+            <li data-rule="length"><span class="dot"></span>至少 8 碼</li>
+            <li data-rule="case"><span class="dot"></span>含有大小寫字母</li>
+            <li data-rule="number"><span class="dot"></span>含有數字</li>
+            <li data-rule="match"><span class="dot"></span>與下方確認密碼一致</li>
+          </ul>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="confirmPassword">確認密碼</label>
+          <input id="confirmPassword" name="confirmPassword" type="password" class="field-input" required placeholder="請再次輸入密碼" aria-describedby="confirmErr">
+          <p class="field-error" id="confirmErr">請再次輸入密碼</p>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="interestsGroup">興趣標籤</label>
+          <p class="field-hint">至少選 1 項，如果你是全方位怪物就多選幾個。</p>
+
+          <div id="interestsGroup" class="tag-group" role="group" aria-label="興趣標籤" aria-describedby="interestErr">
+            <button type="button" class="tag-btn" data-value="frontend">前端</button>
+            <button type="button" class="tag-btn" data-value="backend">後端</button>
+            <button type="button" class="tag-btn" data-value="uiux">UI / UX</button>
+            <button type="button" class="tag-btn" data-value="security">資安</button>
+            <button type="button" class="tag-btn" data-value="data">資料分析</button>
+            <button type="button" class="tag-btn" data-value="other" id="interestOtherBtn">其他</button>
+          </div>
+
+          <input
+            type="text"
+            id="interestOtherInput"
+            class="field-input interest-other-input hidden"
+            placeholder="請輸入你的其他興趣，例如：車牌辨識、CTF、智慧交通"
+          >
+
+          <input type="hidden" id="interestsValue" name="interests" required aria-label="已選興趣">
+          <p class="field-error" id="interestErr">請至少選擇一個興趣</p>
+        </div>
+
+        <div class="terms-check">
+          <label class="terms-label">
+            <input type="checkbox" id="agreeTerms" class="terms-checkbox" disabled required>
+            <span class="terms-custom" aria-hidden="true"></span>
+            <span class="terms-text">
+            我已閱讀並同意
+            <button type="button" class="link-btn" id="openTerms">服務條款與隱私權政策</button>
+            </span>
+          </label>
+          <p class="terms-hint">請閱讀並同意條款才能繼續。</p>
+        </div>
+
+        <div class="terms-overlay" id="termsOverlay" aria-hidden="true">
+          <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="termsTitle">
+            <div class="terms-header">
+              <h2 id="termsTitle">服務條款與隱私權政策</h2>
+              <button type="button" class="terms-close" id="closeTerms">×</button>
+            </div>
+            <div class="terms-body" id="termsBody">
+            <p>非常歡迎您光臨「<strong>KevinTkuIMWeb</strong>」（以下簡稱本網站），為了讓您能夠安心地使用本網站的各項服務與資訊，特此向您說明本網站的隱私權保護政策，以保障您的權益，請您詳閱下列內容：</p>
+
+            <h3>一、隱私權保護政策的適用範圍</h3>
+            <p>隱私權保護政策內容，包括本網站如何處理在您使用網站服務時收集到的個人識別資料。隱私權保護政策不適用於本網站以外的相關連結網站，也不適用於非本網站所委託或參與管理的人員。</p>
+
+            <h3>二、個人資料的蒐集、處理及利用方式</h3>
+            <p>當您造訪本網站或使用本網站所提供之功能服務時，我們將視該服務功能性質，請您提供必要的個人資料，並在該特定目的範圍內處理及利用您的個人資料；非經您書面同意，本網站不會將個人資料用於其他用途。</p>
+            <p>本網站在您使用服務信箱、問卷調查等互動性功能時，會保留您所提供的姓名、電子郵件地址、聯絡方式及使用時間等。</p>
+            <p>於一般瀏覽時，伺服器會自行記錄相關行徑，包括您使用連線設備的 IP 位址、使用時間、使用的瀏覽器、瀏覽及點選資料記錄等，做為我們增進網站服務的參考依據，此記錄為內部應用，決不對外公佈。</p>
+            <p>為提供精確的服務，我們會將收集的問卷調查內容進行統計與分析，分析結果之統計數據或說明文字呈現，除供內部研究外，我們會視需要公佈統計數據及說明文字，但不涉及特定個人之資料。</p>
+            <p>您可以隨時向我們提出請求，以更正或刪除您的帳戶或本網站所蒐集的個人資料等隱私資訊。聯繫方式請見最下方聯繫管道。</p>
+
+            <h3>三、資料之保護</h3>
+            <p>本網站主機均設有防火牆、防毒系統等相關的各項資訊安全設備及必要的安全防護措施，加以保護網站及您的個人資料。資料只由經過授權的人員才能接觸，相關處理人員皆簽有保密合約，如有違反保密義務者，將會受到相關的法律處分。</p>
+            <p>如因業務需要有必要委託其他單位提供服務時，本網站亦會嚴格要求其遵守保密義務，並採取必要檢查程序以確定其將確實遵守。</p>
+
+            <h3>四、網站對外的相關連結</h3>
+            <p>本網站的網頁提供其他網站的連結，您也可經由本網站所提供的連結，點選進入其他網站。但該連結網站不適用本網站的隱私權保護政策，您必須參考該連結網站中的隱私權保護政策。</p>
+
+            <h3>五、與第三人共用個人資料之政策</h3>
+            <p>本網站絕不會提供、交換、出租或出售任何您的個人資料給其他個人、團體、私人企業或公務機關，但有法律依據或合約義務者，不在此限。</p>
+            <p>前項但書之情形包括但不限於：</p>
+            <ul>
+                <li>經由您書面同意。</li>
+                <li>法律明文規定。</li>
+                <li>為免除您生命、身體、自由或財產上之危險。</li>
+                <li>與公務機關或學術研究機構合作，基於公共利益為統計或學術研究而有必要，且資料經過處理無從識別特定當事人。</li>
+                <li>當您在網站的行為違反服務條款或可能損害網站與其他使用者權益時，經管理單位研析有必要揭露您的個人資料者。</li>
+                <li>有利於您的權益。</li>
+                <li>本網站委託廠商協助蒐集、處理或利用您的個人資料時，將對委外廠商善盡監督管理之責。</li>
+            </ul>
+
+            <h3>六、Cookie 之使用</h3>
+            <p>為了提供您最佳的服務，本網站會在您的電腦中放置並取用我們的 Cookie，若您不願接受 Cookie 的寫入，您可在瀏覽器功能項中設定隱私權等級為高，即可拒絕 Cookie 的寫入，但可能會導致網站某些功能無法正常執行。</p>
+
+            <h3>七、隱私權保護政策之修正</h3>
+            <p>本網站隱私權保護政策將因應需求隨時進行修正，修正後的條款將刊登於「KevinTkuIMWeb」網站上。</p>
+
+            <h3>八、聯繫管道</h3>
+            <p>對於本網站之隱私權政策有任何疑問，或者想提出變更、移除個人資料之請求，請前往本網站「聯絡我們」頁面提交表單。也可寄信至：kevin@kevintkuimweb.com。</p>
+            </div>
+            <div class="terms-footer">
+              <small>請往下捲到底即可勾選同意。</small>
+              <button type="button" class="btn-light" id="footerClose">關閉</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" class="btn-primary" id="submitBtn">建立帳號</button>
+          <button type="button" class="btn-secondary" id="resetBtn">重設</button>
+        </div>
+        <p id="submitHint" style="margin-top: 0.5rem; font-size: 0.9rem; text-align: center;"></p>
+      </form>
+      <!-- 作業要求：前端-3 新增「查看報名清單」按鈕，呼叫 GET /api/signup 顯示結果（可用 <pre>）。 -->
+      <div style="margin-top: 2rem; border-top: 1px solid #eee; padding-top: 1rem; text-align: center;">
+        <h3>後台資料測試</h3>
+        <div class="list-section">
+          <button type="button" class="btn-secondary" id="fetchListBtn">
+            查看報名清單 (GET)
+          </button>
+
+          <!-- ✅ 改成表格容器 -->
+          <div id="listResult" class="list-result" style="display: none;">
+            <div class="list-header">
+              <h3>📋 報名清單</h3>
+              <span class="list-count">共 <span id="listCount">0</span> 人報名</span>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>姓名</th>
+                    <th>Email</th>
+                    <th>手機</th>
+                    <th>興趣</th>
+                    <th>報名時間</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="listTableBody">
+                  <!-- 資料會動態插入這裡 -->
+                </tbody>
+              </table>
+
+              <!-- 空狀態 -->
+              <div id="emptyState" class="empty-state" style="display: none;">
+                <p>📭 尚無報名資料</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      <footer class="card-foot">
+        <p>Copyright © 2025 KevinTkuIMWeb
+            <a href="#" id="footerTerms" class="link-btn">Terms</a>
+        </p>
+      </footer>
+    </section>
+  </main>
+
+  <script src="signup_form.js"></script>
+</body>
+</html>
