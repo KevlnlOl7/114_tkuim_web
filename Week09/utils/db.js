@@ -7,6 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DB_PATH = path.join(__dirname, '../data/participants.json');
 
+// 確保 data 資料夾存在
 async function ensureDataDir() {
   const dir = path.dirname(DB_PATH);
   try {
@@ -16,6 +17,7 @@ async function ensureDataDir() {
   }
 }
 
+// 讀取所有參與者
 export async function getAllParticipants() {
   try {
     await ensureDataDir();
@@ -23,17 +25,25 @@ export async function getAllParticipants() {
     return JSON.parse(data);
   } catch (error) {
     if (error.code === 'ENOENT') {
-      return [];
+      return []; // 檔案不存在時回傳空陣列
     }
     throw error;
   }
 }
 
+// 儲存所有參與者到檔案
 export async function saveParticipants(participants) {
   await ensureDataDir();
   await fs.writeFile(DB_PATH, JSON.stringify(participants, null, 2), 'utf-8');
 }
 
+// 根據 ID 查詢單一參與者（加分項目 2）
+export async function getParticipantById(id) {
+  const participants = await getAllParticipants();
+  return participants.find(p => p.id === id);
+}
+
+// 新增參與者
 export async function addParticipant(participant) {
   const participants = await getAllParticipants();
   participants.push(participant);
@@ -41,11 +51,15 @@ export async function addParticipant(participant) {
   return participant;
 }
 
+// 刪除參與者
 export async function deleteParticipant(id) {
   const participants = await getAllParticipants();
   const index = participants.findIndex(p => p.id === id);
-  if (index === -1) return null;
-
+  
+  if (index === -1) {
+    return null; // 找不到就回傳 null
+  }
+  
   const [removed] = participants.splice(index, 1);
   await saveParticipants(participants);
   return removed;

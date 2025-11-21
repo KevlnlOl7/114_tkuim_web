@@ -13,6 +13,11 @@
 
 
 
+## 加分挑戰
+1. 套用 zod 或 yup 做更完整的資料驗證。 位於server/signup.js
+2. 將資料暫存於 JSON 檔案或 SQLite，並提供 GET /api/signup/:id 查詢。 邏輯位於utils\db.js 實現位於server/signup.js
+3. 撰寫 Jest / Vitest 後端單元測試，模擬 POST /api/signup。
+4. 於前端加入重送機制（例如伺服器錯誤時 3 秒後自動重試一次）。 位於client\signup_form.js
 
 檔案結構
 ```text

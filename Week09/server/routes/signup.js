@@ -5,7 +5,7 @@ import { z } from 'zod';
 import * as db from '../../utils/db.js';
 const router = Router();
 
-// Zod schema
+// 加分挑戰（每項 +5）：項目1 - 套用 zod 或 yup 做更完整的資料驗證。
 const signupSchema = z.object({
   name: z.string().min(1, '姓名為必填'),
   email: z.string().email('Email 格式不正確'),
@@ -35,7 +35,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// 2️POST /api/signup - 新增報名
+// POST /api/signup - 新增報名
 router.post('/', async (req, res, next) => {
   try {
     console.log('收到 POST 請求');

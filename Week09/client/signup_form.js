@@ -201,7 +201,7 @@ pwToggle?.addEventListener('click', () => {
   const isPassword = passwordInput.type === 'password';
   passwordInput.type = isPassword ? 'text' : 'password';
   pwToggle.textContent = isPassword ? '🙈' : '👁';
-  pwMascot?.classList.toggle('shy', !isPassword);
+  pwMascot?.classList.toggle('shy', isPassword);
 });
 
 // 小動物眼睛跟隨滑鼠
