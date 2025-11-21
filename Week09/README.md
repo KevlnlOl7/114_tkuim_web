@@ -193,7 +193,7 @@ Week09                                                # 專案根目錄
    │  └─ style.css                                    # 效果bj4
    ├─ README.md
    ├─ scripts
-   ├─ demo                                            # 存 Demo ( 老師要求 )照片的
+   ├─ demo                                            # 存 Demo ( 老師要求 ) 照片的
    ├─ image.png
    │  └─ test-api.sh
    └─ server                                          # 後端(伺服器端)資料夾
