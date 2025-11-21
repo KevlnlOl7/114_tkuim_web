@@ -2,10 +2,10 @@
 import { Router } from 'express';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
-import * as db from '../../utils/db.js';
+import * as db from '../utils/db.js';
 const router = Router();
 
-// Zod schema
+// 加分挑戰（每項 +5）：項目1 - 套用 zod 或 yup 做更完整的資料驗證。
 const signupSchema = z.object({
   name: z.string().min(1, '姓名為必填'),
   email: z.string().email('Email 格式不正確'),
@@ -23,7 +23,7 @@ const signupSchema = z.object({
   path: ['confirmPassword']
 });
 
-// 1️⃣ GET /api/signup - 查看所有報名（根路徑，放最前面）
+// GET /api/signup - 查看所有報名（根路徑，放最前面）
 router.get('/', async (req, res, next) => {
   try {
     console.log('查看所有報名');
@@ -35,10 +35,10 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// 2️⃣ POST /api/signup - 新增報名
+// POST /api/signup - 新增報名
 router.post('/', async (req, res, next) => {
   try {
-    console.log('📥 收到 POST 請求');
+    console.log('收到 POST 請求');
 
     const validated = signupSchema.parse(req.body);
 
@@ -76,7 +76,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-// 3️⃣ GET /api/signup/:id - 查詢單一參與者（動態路由放後面）
+// GET /api/signup/:id - 查詢單一參與者（動態路由放後面）
 router.get('/:id', async (req, res, next) => {
   try {
     console.log('查詢 ID:', req.params.id);
@@ -97,7 +97,7 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-// 4️⃣ DELETE /api/signup/:id - 刪除報名（動態路由放後面）
+// DELETE /api/signup/:id - 刪除報名（動態路由放後面）
 router.delete('/:id', async (req, res, next) => {
   try {
     console.log('刪除 ID:', req.params.id);

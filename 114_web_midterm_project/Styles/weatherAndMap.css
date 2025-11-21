@@ -312,3 +312,22 @@
 .map-wrapper iframe {
     border-radius: 15px;
 }
+
+#locate-btn {
+  margin: 1rem 0;
+  font-size: 1rem;
+  padding: 0.6rem 1.2rem;
+}
+
+#forecastChartContainer {
+    width: 100%;
+    max-width: 90vw;     /* 使用視窗寬度的90%，電腦螢幕會放大 */
+    margin: 0 auto;
+    min-width: 100px;    /* 下限避免太窄 */
+}
+
+#forecastChart {
+    width: 100% !important;
+    height: 180px;
+    display: block;
+}
