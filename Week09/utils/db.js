@@ -1,52 +1,51 @@
-// utils/db.js
+// server/utils/db.js
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const DB_PATH = path.join(__dirname, '../data/participants.json');
+// 取得目前檔案的路徑，並指向上一層的 data 資料夾
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DB_PATH = path.join(__dirname, '../data');
+const DB_FILE = path.join(DB_PATH, 'participants.json');
 
-async function ensureDataDir() {
-  const dir = path.dirname(DB_PATH);
+// 確保資料夾存在
+async function ensureDB() {
   try {
-    await fs.access(dir);
+    await fs.access(DB_PATH);
   } catch {
-    await fs.mkdir(dir, { recursive: true });
+    await fs.mkdir(DB_PATH, { recursive: true });
+  }
+  try {
+    await fs.access(DB_FILE);
+  } catch {
+    await fs.writeFile(DB_FILE, '[]', 'utf-8');
   }
 }
 
 export async function getAllParticipants() {
-  try {
-    await ensureDataDir();
-    const data = await fs.readFile(DB_PATH, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      return [];
-    }
-    throw error;
-  }
+  await ensureDB();
+  const data = await fs.readFile(DB_FILE, 'utf-8');
+  return JSON.parse(data || '[]');
 }
 
-export async function saveParticipants(participants) {
-  await ensureDataDir();
-  await fs.writeFile(DB_PATH, JSON.stringify(participants, null, 2), 'utf-8');
+export async function getParticipantById(id) {
+  const list = await getAllParticipants();
+  return list.find(p => p.id === id);
 }
 
 export async function addParticipant(participant) {
-  const participants = await getAllParticipants();
-  participants.push(participant);
-  await saveParticipants(participants);
+  const list = await getAllParticipants();
+  list.push(participant);
+  await fs.writeFile(DB_FILE, JSON.stringify(list, null, 2), 'utf-8');
   return participant;
 }
 
 export async function deleteParticipant(id) {
-  const participants = await getAllParticipants();
-  const index = participants.findIndex(p => p.id === id);
+  const list = await getAllParticipants();
+  const index = list.findIndex(p => p.id === id);
   if (index === -1) return null;
 
-  const [removed] = participants.splice(index, 1);
-  await saveParticipants(participants);
+  const [removed] = list.splice(index, 1);
+  await fs.writeFile(DB_FILE, JSON.stringify(list, null, 2), 'utf-8');
   return removed;
 }
