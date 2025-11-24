@@ -191,22 +191,25 @@ Week09                                                # 專案根目錄
    │  ├─ signup_form.html                             # 報名表單主頁面
    │  ├─ signup_form.js                               # 表單互動邏輯（即時驗證、fetch API、LocalStorage）
    │  └─ style.css                                    # 效果bj4
-   ├─ Postman.txt
    ├─ README.md
    ├─ scripts
+   ├─ demo                                            # 存 Demo ( 老師要求 ) 照片的
+   ├─ image.png
    │  └─ test-api.sh
-   ├─ server                                          # 後端(伺服器端)資料夾
-   │  ├─ .env
-   │  ├─ app.js
-   │  ├─ data
-   │  │  └─ participants.json                         # 報名資料檔案（後端自動生成並讀寫）
-   │  ├─ package-lock.json
-   │  ├─ package.json
-   │  ├─ routes
-   │  │  └─ signup.js                                 # 報名相關路由（POST/GET/DELETE、Zod 驗證）
-   │  ├─ tests
-   │  │  ├─ signup_test.js                            # Jest（自動化測試報名功能）
-   │  │  ├─ Signup_API.postman_collection.json        # Post（自動化測試報名功能）
-   │  │  └─ api_test.http                             # REST Client 測試檔
-   │  └─ utils
-   │     └─ db.js                                     # 資料存取模組（讀寫 JSON 檔案的 CRUD 函數）
+   └─ server                                          # 後端(伺服器端)資料夾
+      ├─ .env                                         # 環境變數（PORT、ALLOWED_ORIGIN）
+      ├─ node_modules
+      ├─ app.js
+      ├─ data
+      │  └─ participants.json                         # 報名資料檔案（後端自動生成並讀寫）
+      ├─ package-lock.json
+      ├─ package.json
+      ├─ routes
+      │  └─ signup.js                                 # 報名相關路由（POST/GET/DELETE、Zod 驗證）
+      ├─ tests
+      │  ├─ signup_test.js                            # Jest（自動化測試報名功能）
+      │  ├─ Signup_API.postman_collection.json        # Post（自動化測試報名功能）
+      │  ├─ test-api.sh                               # Shell（批次測試工具）
+      │  └─ api_test.http                             # REST Client 測試檔
+      └─ utils
+         └─ db.js                                     # 資料存取模組（讀寫 JSON 檔案的 CRUD 函數）
