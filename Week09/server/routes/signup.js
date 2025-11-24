@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
-import * as db from '../../utils/db.js';
+import * as db from '../utils/db.js';
 const router = Router();
 
 // 加分挑戰（每項 +5）：項目1 - 套用 zod 或 yup 做更完整的資料驗證。

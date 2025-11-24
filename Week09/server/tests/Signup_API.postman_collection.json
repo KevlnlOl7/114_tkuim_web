@@ -1,0 +1,346 @@
+{
+  "info": {
+    "name": "Week09 Signup",
+    "description": "淡江大學資管系 Week09 作業 - 完整 API 測試集合\n\n**測試項目：**\n- 健康檢查\n- 報名功能（成功 + 失敗案例）\n- 查詢功能\n- 刪除功能\n- 錯誤處理",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "健康檢查",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"狀態碼為 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"回應包含 status 欄位\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status).to.eql('ok');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "檢查伺服器是否正常運作"
+      },
+      "response": []
+    },
+    {
+      "name": "新增報名（成功）",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"狀態碼為 201\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"回應包含參與者資料\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('participant');",
+              "    pm.expect(jsonData.participant).to.have.property('id');",
+              "    ",
+              "    // 儲存 ID 供後續測試使用",
+              "    pm.environment.set('participant_id', jsonData.participant.id);",
+              "    console.log('已儲存 ID:', jsonData.participant.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"王小明\",\n  \"email\": \"ming{{$timestamp}}@example.com\",\n  \"phone\": \"0912345678\",\n  \"password\": \"Test1234\",\n  \"confirmPassword\": \"Test1234\",\n  \"interests\": [\"frontend\", \"backend\"],\n  \"terms\": true\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/signup",
+          "host": ["{{base_url}}"],
+          "path": ["api", "signup"]
+        },
+        "description": "成功新增報名，自動使用時間戳避免 Email 重複"
+      },
+      "response": []
+    },
+    {
+      "name": "查看所有報名",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"狀態碼為 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"回應包含 total 和 data\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('total');",
+              "    pm.expect(jsonData).to.have.property('data');",
+              "    pm.expect(jsonData.data).to.be.an('array');",
+              "    console.log('目前報名人數:', jsonData.total);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/signup",
+          "host": ["{{base_url}}"],
+          "path": ["api", "signup"]
+        },
+        "description": "取得所有報名資料清單"
+      },
+      "response": []
+    },
+    {
+      "name": "查詢單一參與者",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"狀態碼為 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"回應包含 participant\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('participant');",
+              "    console.log('查詢到:', jsonData.participant.name);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/signup/{{participant_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "signup", "{{participant_id}}"]
+        },
+        "description": "使用前面儲存的 ID 查詢特定參與者"
+      },
+      "response": []
+    },
+    {
+      "name": "Email 格式錯誤（400）",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"狀態碼為 400\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test(\"錯誤訊息包含 Email\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.error).to.include('Email');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"測試\",\n  \"email\": \"invalid-email\",\n  \"phone\": \"0912345678\",\n  \"password\": \"Test1234\",\n  \"confirmPassword\": \"Test1234\",\n  \"interests\": [\"frontend\"],\n  \"terms\": true\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/signup",
+          "host": ["{{base_url}}"],
+          "path": ["api", "signup"]
+        },
+        "description": "測試 Email 格式驗證"
+      },
+      "response": []
+    },
+    {
+      "name": "手機格式錯誤（400）",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"狀態碼為 400\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test(\"錯誤訊息包含手機\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.error).to.include('手機');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"測試\",\n  \"email\": \"test@example.com\",\n  \"phone\": \"1234567890\",\n  \"password\": \"Test1234\",\n  \"confirmPassword\": \"Test1234\",\n  \"interests\": [\"frontend\"],\n  \"terms\": true\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/signup",
+          "host": ["{{base_url}}"],
+          "path": ["api", "signup"]
+        },
+        "description": "測試手機格式驗證（不是 09 開頭）"
+      },
+      "response": []
+    },
+    {
+      "name": "密碼不一致（400）",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"狀態碼為 400\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test(\"錯誤訊息包含密碼\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.error).to.include('密碼');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"測試\",\n  \"email\": \"test@example.com\",\n  \"phone\": \"0912345678\",\n  \"password\": \"Test1234\",\n  \"confirmPassword\": \"Different123\",\n  \"interests\": [\"frontend\"],\n  \"terms\": true\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/signup",
+          "host": ["{{base_url}}"],
+          "path": ["api", "signup"]
+        },
+        "description": "測試確認密碼驗證"
+      },
+      "response": []
+    },
+    {
+      "name": "刪除報名",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"狀態碼為 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"回應包含刪除的資料\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('message');",
+              "    pm.expect(jsonData).to.have.property('participant');",
+              "    console.log('已刪除:', jsonData.participant.name);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/signup/{{participant_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "signup", "{{participant_id}}"]
+        },
+        "description": "刪除指定的報名資料"
+      },
+      "response": []
+    },
+    {
+      "name": "404 錯誤測試",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"狀態碼為 404\", function () {",
+              "    pm.response.to.have.status(404);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/notfound",
+          "host": ["{{base_url}}"],
+          "path": ["api", "notfound"]
+        },
+        "description": "測試 404 錯誤處理"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3001",
+      "type": "string"
+    }
+  ]
+}

@@ -1,0 +1,237 @@
+### ==========================================
+### Week09 報名系統 API 完整測試
+### 使用方式：安裝 VS Code 的 REST Client 擴充功能
+### 點擊每個 ### 上方的 "Send Request" 即可測試
+### ==========================================
+
+### 設定變數
+@baseUrl = http://localhost:3001
+@testEmail = test-{{$timestamp}}@example.com
+
+### ==========================================
+### 1. 健康檢查
+### ==========================================
+GET {{baseUrl}}/health
+###
+
+### ==========================================
+### 2. 查看所有報名（初始狀態）
+### ==========================================
+GET {{baseUrl}}/api/signup
+###
+
+### ==========================================
+### 3. 新增報名 - 成功案例
+### ==========================================
+# @name signup
+POST {{baseUrl}}/api/signup
+Content-Type: application/json
+
+{
+  "name": "王小明",
+  "email": "{{testEmail}}",
+  "phone": "0987654321",
+  "password": "Test1234",
+  "confirmPassword": "Test1234",
+  "interests": ["frontend", "backend"],
+  "terms": true
+}
+###
+
+### ==========================================
+### 4. 查看所有報名（應該有一筆資料）
+### ==========================================
+GET {{baseUrl}}/api/signup
+###
+
+### ==========================================
+### 5. 查詢單一參與者（使用上面新增的 ID）
+### 注意：需要先執行步驟 3，然後手動複製 ID 到下面
+### ==========================================
+@participantId = abc12345
+GET {{baseUrl}}/api/signup/{{participantId}}
+###
+
+### ==========================================
+### 6. 新增報名 - Email 格式錯誤
+### ==========================================
+POST {{baseUrl}}/api/signup
+Content-Type: application/json
+
+{
+  "name": "測試用戶",
+  "email": "invalid-email",
+  "phone": "0912345678",
+  "password": "Test1234",
+  "confirmPassword": "Test1234",
+  "interests": ["frontend"],
+  "terms": true
+}
+###
+
+### ==========================================
+### 7. 新增報名 - 手機格式錯誤
+### ==========================================
+POST {{baseUrl}}/api/signup
+Content-Type: application/json
+
+{
+  "name": "測試用戶",
+  "email": "test2@example.com",
+  "phone": "1234567890",
+  "password": "Test1234",
+  "confirmPassword": "Test1234",
+  "interests": ["frontend"],
+  "terms": true
+}
+###
+
+### ==========================================
+### 8. 新增報名 - 密碼強度不足
+### ==========================================
+POST {{baseUrl}}/api/signup
+Content-Type: application/json
+
+{
+  "name": "測試用戶",
+  "email": "test3@example.com",
+  "phone": "0923456789",
+  "password": "test",
+  "confirmPassword": "test",
+  "interests": ["frontend"],
+  "terms": true
+}
+###
+
+### ==========================================
+### 9. 新增報名 - 密碼不一致
+### ==========================================
+POST {{baseUrl}}/api/signup
+Content-Type: application/json
+
+{
+  "name": "測試用戶",
+  "email": "test4@example.com",
+  "phone": "0934567890",
+  "password": "Test1234",
+  "confirmPassword": "Different123",
+  "interests": ["frontend"],
+  "terms": true
+}
+###
+
+### ==========================================
+### 10. 新增報名 - 未同意條款
+### ==========================================
+POST {{baseUrl}}/api/signup
+Content-Type: application/json
+
+{
+  "name": "測試用戶",
+  "email": "test5@example.com",
+  "phone": "0945678901",
+  "password": "Test1234",
+  "confirmPassword": "Test1234",
+  "interests": ["frontend"],
+  "terms": false
+}
+###
+
+### ==========================================
+### 11. 新增報名 - 未選擇興趣
+### ==========================================
+POST {{baseUrl}}/api/signup
+Content-Type: application/json
+
+{
+  "name": "測試用戶",
+  "email": "test6@example.com",
+  "phone": "0956789012",
+  "password": "Test1234",
+  "confirmPassword": "Test1234",
+  "interests": [],
+  "terms": true
+}
+###
+
+### ==========================================
+### 12. 新增報名 - 缺少必填欄位（姓名）
+### ==========================================
+POST {{baseUrl}}/api/signup
+Content-Type: application/json
+
+{
+  "email": "test7@example.com",
+  "phone": "0967890123",
+  "password": "Test1234",
+  "confirmPassword": "Test1234",
+  "interests": ["frontend"],
+  "terms": true
+}
+###
+
+### ==========================================
+### 13. 新增報名 - 重複 Email
+### 注意：需要先執行步驟 3
+### ==========================================
+POST {{baseUrl}}/api/signup
+Content-Type: application/json
+
+{
+  "name": "李大華",
+  "email": "{{testEmail}}",
+  "phone": "0978901234",
+  "password": "Test1234",
+  "confirmPassword": "Test1234",
+  "interests": ["uiux"],
+  "terms": true
+}
+###
+
+### ==========================================
+### 14. 新增報名 - 完整範例（多個興趣）
+### ==========================================
+POST {{baseUrl}}/api/signup
+Content-Type: application/json
+
+{
+  "name": "陳小美",
+  "email": "may-{{$timestamp}}@example.com",
+  "phone": "0989012345",
+  "password": "SecurePass123",
+  "confirmPassword": "SecurePass123",
+  "interests": ["frontend", "backend", "uiux", "database"],
+  "terms": true
+}
+###
+
+### ==========================================
+### 15. 刪除報名（使用步驟 3 的 ID）
+### 注意：需要手動修改 @participantId
+### ==========================================
+DELETE {{baseUrl}}/api/signup/{{participantId}}
+###
+
+### ==========================================
+### 16. 查詢不存在的參與者
+### ==========================================
+GET {{baseUrl}}/api/signup/invalidid123
+###
+
+### ==========================================
+### 17. 刪除不存在的參與者
+### ==========================================
+DELETE {{baseUrl}}/api/signup/invalidid456
+###
+
+### ==========================================
+### 18. 404 錯誤測試
+### ==========================================
+GET {{baseUrl}}/api/notfound
+###
+
+### ==========================================
+### 19. 查看最終報名清單
+### ==========================================
+GET {{baseUrl}}/api/signup
+###
