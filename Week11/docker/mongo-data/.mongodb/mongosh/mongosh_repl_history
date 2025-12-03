@@ -1,1 +1,0 @@
-docker exec -it week11-mongo mongosh -u week11-user -p week11-pass --authenticationDatabase week11
