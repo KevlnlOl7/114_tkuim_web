@@ -1,0 +1,3 @@
+db.participants.find().skip(2).limit(2)
+db.participants.find().sort({ createdAt: -1 })
+use week11
