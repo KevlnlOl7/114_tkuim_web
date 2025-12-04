@@ -1,0 +1,47 @@
+@baseUrl = http://localhost:3001/api/signup
+@contentType = application/json
+
+### 1. 建立報名 (第一次，應成功)
+# @name createSignup
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "name": "張同學",
+  "email": "student@o365.tku.edu.tw",
+  "phone": "0912888888"
+}
+
+### 2. 建立重複報名 (應失敗，回傳 409)
+POST {{baseUrl}}
+Content-Type: {{contentType}}
+
+{
+  "name": "分身帳號",
+  "email": "student@o365.tku.edu.tw",
+  "phone": "0988777666"
+}
+
+### 3. 取得清單 (預設第一頁)
+GET {{baseUrl}}
+
+### 4. 取得清單 (分頁測試：第 1 頁，每頁 2 筆)
+GET {{baseUrl}}?page=1&limit=2
+
+### 5. 取得清單 (分頁測試：第 2 頁)
+GET {{baseUrl}}?page=2&limit=2
+
+### 變數設定 (從第 1 步的回應抓 ID)
+@id = {{createSignup.response.body.id}}
+
+### 6. 更新資料 (修改電話與狀態)
+PATCH {{baseUrl}}/{{id}}
+Content-Type: {{contentType}}
+
+{
+  "phone": "0900000000",
+  "status": "confirmed"
+}
+
+### 7. 刪除資料
+DELETE {{baseUrl}}/{{id}}
