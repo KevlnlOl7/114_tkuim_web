@@ -215,7 +215,7 @@ Week11/
      └─ Week11_API.postman_collection.json  # Postman 匯入檔
 ```
 
-常見問題 FAQ
+### 常見問題 FAQ
 
 Q: 為什麼 npm run dev 失敗？
 A: 請確認是否有安裝依賴 (npm install)，以及 MongoDB 是否已啟動。
@@ -223,4 +223,19 @@ A: 請確認是否有安裝依賴 (npm install)，以及 MongoDB 是否已啟動
 Q: 重複報名沒有跳錯誤？
 A: 請確認伺服器啟動時是否有印出 [DB] Indexes ensured，這代表唯一索引已建立。
 
+### 何謂 CRUD ?
+CRUD 是取 Create、Read、Update、Delete 開頭字母所組成。是常對資料庫做的四個動作。
+1. Create 新增/創造
+2. Read 讀取
+3. Update 更新/修改
+4. Delete 刪除
+   
+這邊我以常用的某海鮮電商為例。
 
+我看到喜歡的商品，按下「直接購買」並結帳。這時候，系統裡就生出了一筆新的訂單。這就是 Create。
+
+通常剛下單會希望貨趕快到，這時我打開 App 去看「待收貨」清單，想知道包裹到哪了。這個動作就是去資料庫把資料撈出來看。這就是 Read。
+
+你突然發現付款方式選錯了，今天國X Cube 的回饋比中O LinePay 卡多，趕快去訂單頁面按修改，把信用卡改成Cube。這就是修改原本的資料。這就是 Update。
+
+之後睡不著又繼續滑啊滑，發現哇X 這家比較便宜耶，於是在前賣家出貨前按了「取消訂單」。這筆訂單就從待辦事項裡消失了。這就是 Delete。
