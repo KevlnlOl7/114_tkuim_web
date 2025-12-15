@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>錸德 (2349) - 個股走勢 - Anue 鉅亨</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header class="flex items-center justify-between px-4">
+        <div class="container flex items-center justify-between" style="height: 100%;">
+            <div class="flex items-center">
+                <a href="#" onclick="switchPage('dashboard')" class="logo flex items-center gap-2"
+                    style="margin-right: 40px;">
+                    <div
+                        style="width: 30px; height: 30px; background: linear-gradient(135deg, #ff8c00, #ff0080); border-radius: 50%;">
+                    </div>
+                    <strong>Anue 鉅亨</strong>
+                </a>
+                <nav class="flex gap-6 hidden-mobile">
+                    <a href="#" onclick="switchPage('dashboard')" id="nav-dashboard" class="nav-link active">台股 (總覽)</a>
+                    <a href="#" onclick="switchPage('analysis')" id="nav-analysis" class="nav-link">個股分析</a>
+                    <a href="#" style="color: #ccc; cursor: not-allowed;" onclick="handleNotImplemented()"
+                        class="nav-link">美股</a>
+                    <a href="#" style="color: #ccc; cursor: not-allowed;" onclick="handleNotImplemented()"
+                        class="nav-link">基金</a>
+                </nav>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="search-bar">
+                    <span style="color: #999;">🔍</span>
+                    <input type="text" placeholder="搜尋台股代碼或名稱">
+                </div>
+                <button class="btn" onclick="handleLogin()">登入</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mt-4">
+
+        <!-- Shared Info Header -->
+        <div class="bg-white rounded shadow-sm p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="tag tag-orange">上市</span>
+                        <span class="tag tag-blue">光電業</span>
+                    </div>
+                    <div class="flex items-center">
+                        <h1 class="stock-title">錸德</h1>
+                        <span class="stock-code">2349</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="btn text-sm"
+                        style="border-color: var(--primary-color); color: var(--primary-color); background: #fff5eb; font-weight: bold;"
+                        onclick="switchPage('analysis')">📊 詳細分析</button>
+                    <button class="btn text-sm" onclick="handleNotImplemented()">☆ 自選</button>
+                </div>
+            </div>
+            <div class="flex items-center mt-2">
+                <div class="price-large text-up">15.45</div>
+                <div class="flex-col">
+                    <div class="text-up font-bold">▲ 1.40</div>
+                    <div class="text-up font-bold">+9.96%</div>
+                </div>
+                <div class="text-secondary text-sm" style="margin-left: 20px;">
+                    市場盤中 <span id="current-time">12/15 10:47</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 1: DASHBOARD -->
+        <div id="page-dashboard" class="page-section active">
+            <div class="flex gap-4">
+                <!-- Left: Chart -->
+                <div class="bg-white rounded shadow-sm p-4" style="flex: 3;">
+                    <div class="time-tabs flex gap-4">
+                        <div id="tab-intraday" class="time-tab active" onclick="switchChartPeriod('intraday')">分時</div>
+                        <div id="tab-daily" class="time-tab" onclick="switchChartPeriod('daily')">日K</div>
+                        <div id="tab-weekly" class="time-tab" onclick="switchChartPeriod('weekly')">週K</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="kLineChart"></canvas>
+                    </div>
+                    <div class="mt-4 flex justify-between text-sm"
+                        style="border-top: 1px solid #f0f0f0; padding-top: 20px;">
+                        <div class="flex-col gap-2">
+                            <div class="flex justify-between gap-4"><span class="text-secondary">今開</span>
+                                <span>14.60</span>
+                            </div>
+                            <div class="flex justify-between gap-4"><span class="text-secondary">昨收</span>
+                                <span>14.05</span>
+                            </div>
+                        </div>
+                        <div class="flex-col gap-2">
+                            <div class="flex justify-between gap-4"><span class="text-secondary">成交量</span>
+                                <span>40,611</span>
+                            </div>
+                            <div class="flex justify-between gap-4"><span class="text-secondary">成交額</span>
+                                <span>6.17億</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right: Order Book -->
+                <div class="bg-white rounded shadow-sm p-4" style="flex: 1;">
+                    <div class="font-bold mb-4 border-bottom pb-2">五檔</div>
+                    <div id="order-book-content">
+                        <!-- JS populated -->
+                    </div>
+                    <div class="mt-4 text-center">
+                        <button class="btn btn-primary" style="width: 100%;" onclick="handlePlaceOrder()">下單</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 2: ANALYSIS -->
+        <div id="page-analysis" class="page-section">
+            <div class="sub-nav">
+                <div class="sub-nav-item active" onclick="switchPage('analysis')">總覽</div>
+                <div class="sub-nav-item" onclick="handleNotImplemented()">線圖</div>
+                <div class="sub-nav-item" onclick="switchPage('chips')">籌碼</div>
+                <div class="sub-nav-item" onclick="switchPage('dividend')">股利</div>
+                <div class="sub-nav-item" onclick="handleNotImplemented()">簡介</div>
+            </div>
+            <div class="flex gap-4">
+                <!-- Left Column -->
+                <div style="flex: 2;">
+                    <div class="bg-white rounded shadow-sm p-4 mb-4">
+                        <h2 class="font-bold mb-4"
+                            style="border-left: 4px solid var(--primary-color); padding-left: 8px;">公司簡介</h2>
+                        <table class="info-table">
+                            <tr>
+                                <td class="label">公司名稱</td>
+                                <td>錸德科技股份有限公司 (RITEK)</td>
+                            </tr>
+                            <tr>
+                                <td class="label">董事長</td>
+                                <td>葉垂景</td>
+                            </tr>
+                            <tr>
+                                <td class="label">主要業務</td>
+                                <td>光碟片、影碟片、組裝機器、光電產品。</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="bg-white rounded shadow-sm p-4 mb-4">
+                        <h2 class="font-bold mb-4"
+                            style="border-left: 4px solid var(--primary-color); padding-left: 8px;">營業構成</h2>
+                        <div style="height: 250px; display: flex; justify-content: center;">
+                            <canvas id="businessChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Financial Indicators (Restored) -->
+                    <div class="bg-white rounded shadow-sm p-4 mb-4">
+                        <h2 class="font-bold mb-4"
+                            style="border-left: 4px solid var(--primary-color); padding-left: 8px;">財務指標</h2>
+                        <div class="flex gap-4">
+                            <div
+                                style="flex: 1; text-align: center; padding: 10px; background: #fafafa; border-radius: 8px;">
+                                <div class="text-secondary text-sm">每股淨值</div>
+                                <div class="font-bold text-lg">7.54</div>
+                            </div>
+                            <div
+                                style="flex: 1; text-align: center; padding: 10px; background: #fafafa; border-radius: 8px;">
+                                <div class="text-secondary text-sm">本益比</div>
+                                <div class="font-bold text-lg">2.04</div>
+                            </div>
+                            <div
+                                style="flex: 1; text-align: center; padding: 10px; background: #fafafa; border-radius: 8px;">
+                                <div class="text-secondary text-sm">毛利率</div>
+                                <div class="font-bold text-lg text-up">9.86%</div>
+                            </div>
+                            <div
+                                style="flex: 1; text-align: center; padding: 10px; background: #fafafa; border-radius: 8px;">
+                                <div class="text-secondary text-sm">淨利率</div>
+                                <div class="font-bold text-lg text-down">-1.06%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right Column -->
+                <div style="flex: 1;">
+                    <div class="bg-white rounded shadow-sm p-4 mb-4">
+                        <h2 class="font-bold mb-4"
+                            style="border-left: 4px solid var(--primary-color); padding-left: 8px;">個股新聞</h2>
+                        <ul id="news-feed" class="flex-col gap-4"></ul>
+                    </div>
+                    <div class="bg-white rounded shadow-sm p-4">
+                        <h2 class="font-bold mb-4"
+                            style="border-left: 4px solid var(--primary-color); padding-left: 8px;">法人買賣超</h2>
+                        <div style="height: 200px;">
+                            <canvas id="valueChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 3: CHIPS (籌碼) -->
+        <div id="page-chips" class="page-section">
+            <div class="sub-nav">
+                <div class="sub-nav-item" onclick="switchPage('analysis')">總覽</div>
+                <div class="sub-nav-item" onclick="handleNotImplemented()">線圖</div>
+                <div class="sub-nav-item active">籌碼</div>
+                <div class="sub-nav-item" onclick="switchPage('dividend')">股利</div>
+                <div class="sub-nav-item" onclick="handleNotImplemented()">簡介</div>
+            </div>
+            <div class="bg-white rounded shadow-sm p-4 mb-4">
+                <h2 class="font-bold mb-4" style="border-left: 4px solid var(--primary-color); padding-left: 8px;">
+                    三大法人買賣超</h2>
+                <div style="height: 400px; position: relative;">
+                    <canvas id="chipsMainChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 4: DIVIDEND (股利) -->
+        <div id="page-dividend" class="page-section">
+            <div class="sub-nav">
+                <div class="sub-nav-item" onclick="switchPage('analysis')">總覽</div>
+                <div class="sub-nav-item" onclick="handleNotImplemented()">線圖</div>
+                <div class="sub-nav-item" onclick="switchPage('chips')">籌碼</div>
+                <div class="sub-nav-item active">股利</div>
+                <div class="sub-nav-item" onclick="handleNotImplemented()">簡介</div>
+            </div>
+
+            <!-- Dividend Policy Chart -->
+            <div class="bg-white rounded shadow-sm p-4 mb-4">
+                <h2 class="font-bold mb-4" style="border-left: 4px solid var(--primary-color); padding-left: 8px;">股利政策
+                </h2>
+                <div style="height: 300px; position: relative;">
+                    <canvas id="dividendChart"></canvas>
+                </div>
+                <div class="mt-4 p-2 bg-gray-100 text-sm text-center rounded text-secondary"
+                    style="background: #f9f9f9;">
+                    近10年內，連續配發現金股利合計 <span class="text-up font-bold">0.86</span> 元
+                </div>
+            </div>
+
+            <!-- Dividend History Table -->
+            <div class="bg-white rounded shadow-sm p-4">
+                <h2 class="font-bold mb-4" style="border-left: 4px solid var(--primary-color); padding-left: 8px;">
+                    歷史股利發放</h2>
+                <div style="overflow-x: auto;">
+                    <table class="info-table" id="dividend-table">
+                        <thead>
+                            <tr style="background: #fdfdfd; font-weight: bold;">
+                                <td style="white-space:nowrap;">除權息日</td>
+                                <td style="white-space:nowrap;">現金股利</td>
+                                <td style="white-space:nowrap;">股票股利</td>
+                                <td style="white-space:nowrap;">現金殖利率</td>
+                            </tr>
+                        </thead>
+                        <tbody id="dividend-table-body">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
