@@ -1,0 +1,94 @@
+@baseUrl = http://localhost:5000
+
+### 1. Register Student
+# @name registerStudent
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+    "email": "student1@example.com",
+    "password": "password123",
+    "role": "student"
+}
+
+### 2. Login Student
+# @name loginStudent
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "student1@example.com",
+    "password": "password123"
+}
+
+@studentToken = {{loginStudent.response.body.token}}
+
+### 3. Register Admin
+# @name registerAdmin
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+    "email": "admin1@example.com",
+    "password": "password123",
+    "role": "admin"
+}
+
+### 4. Login Admin
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "admin1@example.com",
+    "password": "password123"
+}
+
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 5. Get Signups (Unauthenticated - Should Fail)
+GET {{baseUrl}}/api/signup
+
+### 6. Post Signup (Student)
+# @name createStudentSignup
+POST {{baseUrl}}/api/signup
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+    "content": "Student's application content"
+}
+
+@studentSignupId = {{createStudentSignup.response.body._id}}
+
+### 7. Post Signup (Admin)
+# @name createAdminSignup
+POST {{baseUrl}}/api/signup
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "content": "Admin's application content"
+}
+
+@adminSignupId = {{createAdminSignup.response.body._id}}
+
+### 8. Get Signups (Student - Should see only own)
+GET {{baseUrl}}/api/signup
+Authorization: Bearer {{studentToken}}
+
+### 9. Get Signups (Admin - Should see all)
+GET {{baseUrl}}/api/signup
+Authorization: Bearer {{adminToken}}
+
+### 10. Student try delete Admin's signup (Should Fail 403)
+DELETE {{baseUrl}}/api/signup/{{adminSignupId}}
+Authorization: Bearer {{studentToken}}
+
+### 11. Student delete own signup (Should Success 204)
+DELETE {{baseUrl}}/api/signup/{{studentSignupId}}
+Authorization: Bearer {{studentToken}}
+
+### 12. Admin delete any signup
+DELETE {{baseUrl}}/api/signup/{{adminSignupId}}
+Authorization: Bearer {{adminToken}}
