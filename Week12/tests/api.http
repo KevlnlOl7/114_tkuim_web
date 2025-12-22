@@ -1,0 +1,71 @@
+### Signup Admin
+POST http://localhost:5500/auth/signup
+Content-Type: application/json
+
+{
+  "email": "admin@test.com",
+  "password": "123",
+  "role": "admin"
+}
+
+### Login Admin
+# @name adminLogin
+POST http://localhost:5500/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@test.com",
+  "password": "123"
+}
+
+### Signup Student
+POST http://localhost:5500/auth/signup
+Content-Type: application/json
+
+{
+  "email": "student@test.com",
+  "password": "123",
+  "role": "student"
+}
+
+### Login Student
+# @name studentLogin
+POST http://localhost:5500/auth/login
+Content-Type: application/json
+
+{
+  "email": "student@test.com",
+  "password": "123"
+}
+
+### Risk Experience (No Auth - Should Fail)
+GET http://localhost:5500/api/signup
+
+### Risk Experience (Delete without Auth - Should Fail)
+DELETE http://localhost:5500/api/signup/randomid
+
+### Create Data (Student)
+POST http://localhost:5500/api/signup
+Content-Type: application/json
+Authorization: Bearer {{studentLogin.response.body.token}}
+
+{
+  "content": "Student's Project"
+}
+
+### Create Data (Admin)
+POST http://localhost:5500/api/signup
+Content-Type: application/json
+Authorization: Bearer {{adminLogin.response.body.token}}
+
+{
+  "content": "Admin's Announcement"
+}
+
+### Get Data (Student - Sees Only Own)
+GET http://localhost:5500/api/signup
+Authorization: Bearer {{studentLogin.response.body.token}}
+
+### Get Data (Admin - Sees All)
+GET http://localhost:5500/api/signup
+Authorization: Bearer {{adminLogin.response.body.token}}

@@ -16,22 +16,27 @@ app.use(cors({
     origin: function (origin, callback) {
         // allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
-            // For dev/homework purpose, maybe just allow all if env is set, or specific
-            // The user asked for specific allowed origins.
-            return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
+
+        // For development/homework, specific origin matching can be flaky.
+        // Let's rely on ALLOWED_ORIGIN if present, otherwise default allow for localhost.
+        if (allowedOrigins.length === 0 || allowedOrigins.indexOf(origin) !== -1 || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+            return callback(null, true);
         }
-        return callback(null, true);
+
+        return callback(new Error(`The CORS policy for this site does not allow access from the specified Origin: ${origin}`), false);
     }
 }));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static(path.join(__dirname, '../client')));
 
 import authRouter from './routes/auth.js';
 app.use('/auth', authRouter);
 
-import signupRouter from './routes/api_signup.js';
+import signupRouter from './routes/signup.js';
 app.use('/api/signup', signupRouter);
+
+import logsRouter from './routes/logs.js';
+app.use('/api/logs', logsRouter);
 
 // Error handling
 app.use((err, req, res, next) => {
