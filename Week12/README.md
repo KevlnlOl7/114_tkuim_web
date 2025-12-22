@@ -13,19 +13,19 @@
 ## 加分選項 (已實作)
 - [x] **Refresh Token / Session Store**: 登入回傳 Refresh Token，並提供 `/auth/refresh` 換發新 Token。
 - [x] **忘記密碼 / 重設密碼流程**: 提供 `/auth/forgot-password` (模擬發信) 與 `/auth/reset-password` 修改密碼。
-![alt text](image-3.png)
+![alt text](Demo/image-3.png)
 - [x] **操作日誌**: 記錄哪個使用者在什麼時間做了什麼事 (存於 `logs` collection)。
-![alt text](image-4.png)
+![alt text](Demo/image-4.png)
 
 ## 繳交前檢查
 - [x] `npm test` 通過 (Vitest + Supertest + Mongo Memory Server)。
-![alt text](image-2.png)
+![alt text](Demo/image-2.png)
 - [x] `tests/api.http` 測試通過 (未登入拒絕 -> 登入成功 -> 權限測試)。
 - [x] 資料庫無明碼密碼 (使用 bcrypt)。
-![alt text](image-1.png)
+![alt text](Demo/image-1.png)
 - [x] `.env` 未被 commit。 ( .gitignore我寫在根目錄！)
 - [x] Admin 可看見全部資料。
-![alt text](image.png)
+![alt text](Demo/image.png)
 
 ## 啟動方式
 
