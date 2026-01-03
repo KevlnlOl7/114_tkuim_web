@@ -1,15 +1,15 @@
 # backend/main.py
 import os
 import pandas as pd
+import io
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pymongo import MongoClient
 from pydantic import BaseModel
-from typing import Optional, List, Dict
+from typing import Optional, List
 from bson import ObjectId
-from datetime import datetime
 
 load_dotenv()
 
@@ -26,7 +26,7 @@ mongo_url = os.getenv("MONGODB_URL", "mongodb://localhost:27017/")
 client = MongoClient(mongo_url)
 db = client["PyMoney"]
 collection = db["transactions"]
-settings_collection = db["settings"] # 新增：用來存設定 (如預算)
+settings_collection = db["settings"]
 
 class Transaction(BaseModel):
     title: str
@@ -44,9 +44,9 @@ def fix_id(doc):
     doc["id"] = str(doc.pop("_id"))
     return doc
 
-# --- API ---
+# --- API 區域 ---
 
-# [既有 API] 交易相關
+# [交易] 讀取
 @app.get("/api/transactions")
 def get_transactions(
     keyword: Optional[str] = None,
@@ -66,22 +66,25 @@ def get_transactions(
     data = collection.find(query).sort("date", -1)
     return [fix_id(doc) for doc in data]
 
+# [交易] 新增
 @app.post("/api/transactions")
 def create_transaction(tx: Transaction):
     result = collection.insert_one(tx.dict())
     return {"message": "新增成功", "id": str(result.inserted_id)}
 
+# [交易] 更新
 @app.put("/api/transactions/{id}")
 def update_transaction(id: str, tx: Transaction):
     collection.update_one({"_id": ObjectId(id)}, {"$set": tx.dict()})
     return {"message": "更新成功"}
 
+# [交易] 刪除
 @app.delete("/api/transactions/{id}")
 def delete_transaction(id: str):
     collection.delete_one({"_id": ObjectId(id)})
     return {"message": "刪除成功"}
 
-# [既有 API] Dashboard
+# [Dashboard] 圓餅圖
 @app.get("/api/dashboard/stats")
 def get_category_stats():
     pipeline = [
@@ -91,6 +94,7 @@ def get_category_stats():
     result = list(collection.aggregate(pipeline))
     return {item["_id"]: item["total"] for item in result}
 
+# [Dashboard] 長條圖
 @app.get("/api/dashboard/trend")
 def get_trend_stats():
     pipeline = [
@@ -109,18 +113,17 @@ def get_trend_stats():
         "expenses": [item["expense"] for item in result]
     }
 
-# [新增 API] 預算設定 Budget
+# [預算] 讀取
 @app.get("/api/budget")
 def get_budget():
-    # 嘗試抓取設定，沒有就回傳預設值 0
     setting = settings_collection.find_one({"_id": "monthly_budget"})
     if setting:
         return {"limit": setting["limit"]}
     return {"limit": 0}
 
+# [預算] 設定
 @app.post("/api/budget")
 def set_budget(budget: BudgetSetting):
-    # 使用 upsert=True (有就更新，沒有就新增)
     settings_collection.update_one(
         {"_id": "monthly_budget"},
         {"$set": {"limit": budget.limit}},
@@ -128,7 +131,7 @@ def set_budget(budget: BudgetSetting):
     )
     return {"message": "預算設定成功"}
 
-# [既有 API] 匯出
+# [匯出] Excel
 @app.get("/api/export")
 def export_excel():
     data = list(collection.find().sort("date", -1))
@@ -141,3 +144,40 @@ def export_excel():
     filename = "PyMoney_Export.xlsx"
     df.to_excel(filename, index=False)
     return FileResponse(filename, filename=filename)
+
+# [匯入] Excel/CSV (新功能!)
+@app.post("/api/import")
+async def import_file(file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
+        
+        # 判斷副檔名
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(contents))
+        elif file.filename.endswith(('.xls', '.xlsx')):
+            df = pd.read_excel(io.BytesIO(contents))
+        else:
+            raise HTTPException(status_code=400, detail="不支援的檔案格式，請上傳 CSV 或 Excel")
+
+        # 資料處理與檢查
+        required_cols = ["date", "title", "amount", "category"]
+        for col in required_cols:
+            if col not in df.columns:
+                 raise HTTPException(status_code=400, detail=f"檔案缺少欄位: {col}")
+
+        # 填補缺失值 (預設值)
+        if "type" not in df.columns: df["type"] = "expense"
+        if "payment_method" not in df.columns: df["payment_method"] = "Cash"
+        
+        # 轉成字典列表
+        records = df.to_dict(orient="records")
+        
+        # 寫入資料庫
+        if records:
+            collection.insert_many(records)
+            
+        return {"message": f"成功匯入 {len(records)} 筆資料"}
+        
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=f"匯入失敗: {str(e)}")

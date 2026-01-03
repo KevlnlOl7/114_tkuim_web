@@ -8,7 +8,7 @@ import BarChart from './components/BarChart.vue'
 const transactions = ref([])
 const stats = ref({})
 const trendData = ref({})
-const budgetLimit = ref(0) // 預算上限
+const budgetLimit = ref(0)
 
 // 搜尋與篩選
 const keyword = ref('')
@@ -19,9 +19,12 @@ const endDate = ref('')
 const isEditing = ref(false)
 const editId = ref(null)
 
-// 預算設定模式
+// 預算設定
 const showBudgetInput = ref(false)
 const newBudget = ref(0)
+
+// 檔案上傳 ref
+const fileInput = ref(null) 
 
 // 表單
 const form = ref({
@@ -30,10 +33,9 @@ const form = ref({
   type: 'expense', payment_method: 'Cash'
 })
 
-// --- API 功能 ---
+// --- API ---
 const fetchData = async () => {
   try {
-    // 1. 列表
     let url = `http://127.0.0.1:8000/api/transactions?keyword=${keyword.value}`
     if (startDate.value) url += `&start_date=${startDate.value}`
     if (endDate.value) url += `&end_date=${endDate.value}`
@@ -41,16 +43,13 @@ const fetchData = async () => {
     const listRes = await axios.get(url)
     transactions.value = listRes.data 
 
-    // 2. 圖表數據
     const statsRes = await axios.get('http://127.0.0.1:8000/api/dashboard/stats')
     stats.value = statsRes.data
     const trendRes = await axios.get('http://127.0.0.1:8000/api/dashboard/trend')
     trendData.value = trendRes.data
     
-    // 3. 預算設定
     const budgetRes = await axios.get('http://127.0.0.1:8000/api/budget')
     budgetLimit.value = budgetRes.data.limit
-
   } catch (error) { console.error(error) }
 }
 
@@ -75,7 +74,6 @@ const removeTransaction = async (id) => {
   fetchData()
 }
 
-// 預算設定
 const saveBudget = async () => {
   try {
     await axios.post('http://127.0.0.1:8000/api/budget', { limit: Number(newBudget.value) })
@@ -89,7 +87,6 @@ const toggleBudgetEdit = () => {
   showBudgetInput.value = !showBudgetInput.value
 }
 
-// 編輯與重置
 const startEdit = (item) => {
   isEditing.value = true
   editId.value = item.id
@@ -104,12 +101,39 @@ const resetForm = () => {
     type: 'expense', payment_method: 'Cash'
   }
 }
+
+// 匯出
 const exportExcel = () => { window.open('http://127.0.0.1:8000/api/export', '_blank') }
 
-// 監聽
+// 觸發檔案選擇框
+const triggerFileInput = () => {
+  fileInput.value.click()
+}
+
+// 執行匯入
+const handleImport = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  try {
+    const res = await axios.post('http://127.0.0.1:8000/api/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    alert(res.data.message)
+    fetchData() // 匯入後重新抓資料
+  } catch (error) {
+    console.error(error)
+    alert("匯入失敗：" + (error.response?.data?.detail || error.message))
+  }
+  // 清空 input 讓同一檔案可以再選一次
+  event.target.value = ''
+}
+
 watch([keyword, startDate, endDate], () => { fetchData() })
 
-// [計算] 總淨資產
 const totalAmount = computed(() => {
   return transactions.value.reduce((sum, item) => {
     if (item.type === 'income') return sum + item.amount
@@ -118,21 +142,18 @@ const totalAmount = computed(() => {
   }, 0)
 })
 
-// [計算] 本月總支出 (用來跟預算比對)
 const monthlyExpense = computed(() => {
   const now = new Date()
-  const currentMonth = now.toISOString().slice(0, 7) // 取得 "2024-06" 格式
-  
+  const currentMonth = now.toISOString().slice(0, 7)
   return transactions.value
     .filter(item => item.type === 'expense' && item.date.startsWith(currentMonth))
     .reduce((sum, item) => sum + item.amount, 0)
 })
 
-// [計算] 預算百分比
 const budgetPercent = computed(() => {
   if (budgetLimit.value === 0) return 0
   const p = (monthlyExpense.value / budgetLimit.value) * 100
-  return Math.min(p, 100) // 最多顯示 100%
+  return Math.min(p, 100)
 })
 
 onMounted(() => fetchData())
@@ -149,25 +170,18 @@ onMounted(() => fetchData())
             <h3>📅 本月預算 ({{ new Date().getMonth() + 1 }}月)</h3>
             <button @click="toggleBudgetEdit" class="btn-sm">⚙️ 設定</button>
           </div>
-
           <div v-if="showBudgetInput" class="budget-input-area">
             <input v-model="newBudget" type="number" placeholder="輸入預算金額" />
             <button @click="saveBudget" class="btn-confirm">儲存</button>
           </div>
-
           <div v-else class="budget-display">
             <div class="budget-info">
               <span>已花費: <b>${{ monthlyExpense }}</b></span>
               <span>預算: ${{ budgetLimit }}</span>
             </div>
-            
             <div class="progress-container">
-              <div 
-                class="progress-bar" 
-                :style="{ width: budgetPercent + '%', backgroundColor: monthlyExpense > budgetLimit ? '#ff7675' : '#74b9ff' }"
-              ></div>
+              <div class="progress-bar" :style="{ width: budgetPercent + '%', backgroundColor: monthlyExpense > budgetLimit ? '#ff7675' : '#74b9ff' }"></div>
             </div>
-            
             <p v-if="monthlyExpense > budgetLimit" class="warning-text">⚠️ 已經超支了！請節制一點！</p>
             <p v-else class="safe-text">✨ 還有 ${{ budgetLimit - monthlyExpense }} 可以花</p>
           </div>
@@ -176,7 +190,13 @@ onMounted(() => fetchData())
         <div class="card balance-card">
           <h3>目前淨資產</h3>
           <h2 :class="totalAmount >= 0 ? 'income-text' : 'expense-text'">${{ totalAmount }}</h2>
-          <button @click="exportExcel" class="btn-outline">📥 匯出 Excel</button>
+          
+          <div class="button-group">
+             <input type="file" ref="fileInput" @change="handleImport" accept=".xlsx,.xls,.csv" style="display: none" />
+            
+            <button @click="triggerFileInput" class="btn-outline">📥 匯入資料</button>
+            <button @click="exportExcel" class="btn-outline">📤 匯出 Excel</button>
+          </div>
         </div>
 
         <div class="card chart-card">
@@ -218,7 +238,6 @@ onMounted(() => fetchData())
               </select>
             </div>
           </div>
-          
           <div class="form-row">
             <div class="input-group flex-2">
               <label>項目說明</label>
@@ -229,7 +248,6 @@ onMounted(() => fetchData())
               <input v-model="form.amount" type="number" placeholder="$" required />
             </div>
           </div>
-
           <div class="form-row" v-if="form.type !== 'transfer'">
             <div class="input-group flex-full">
               <label>分類</label>
@@ -243,7 +261,6 @@ onMounted(() => fetchData())
               </select>
             </div>
           </div>
-
           <button @click="handleSubmit" class="btn-submit" :class="{ 'btn-update': isEditing }">
             {{ isEditing ? '完成修改' : '確認新增' }}
           </button>
@@ -261,9 +278,7 @@ onMounted(() => fetchData())
             <input v-model="endDate" type="date" />
           </div>
         </div>
-
         <div v-if="transactions.length === 0" class="empty-state">無資料...</div>
-
         <div v-else class="transaction-list">
           <div v-for="item in transactions" :key="item.id" class="list-item">
             <div class="item-left">
@@ -281,7 +296,6 @@ onMounted(() => fetchData())
                 </div>
               </div>
             </div>
-            
             <div class="item-right">
               <span class="amount" :class="item.type">
                 {{ item.type === 'expense' ? '-' : (item.type === 'income' ? '+' : '') }} ${{ item.amount }}
@@ -305,25 +319,15 @@ body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
 .app-background { min-height: 100vh; background-color: #f4f5f7; padding: 20px; }
 .container { max-width: 800px; margin: 0 auto; }
 .app-title { text-align: center; color: #333; margin-bottom: 20px; font-size: 1.8rem; }
-
-/* Cards */
 .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; }
-
-/* Dashboard Grid */
-.dashboard-grid { 
-  display: grid; 
-  grid-template-columns: 1fr 1fr; 
-  gap: 15px; 
-  margin-bottom: 20px; 
-}
+.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
 .full-width-card { grid-column: span 2; } 
 
-/* Budget Card (New) */
+/* Budget Card */
 .budget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .budget-header h3 { margin: 0; color: #2c3e50; font-size: 1.1rem; }
 .budget-input-area { display: flex; gap: 10px; }
 .btn-confirm { background: #2ecc71; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; }
-
 .budget-info { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px; color: #555; }
 .progress-container { width: 100%; height: 12px; background: #e0e0e0; border-radius: 6px; overflow: hidden; position: relative; }
 .progress-bar { height: 100%; transition: width 0.5s, background-color 0.5s; }
@@ -334,7 +338,9 @@ body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
 .balance-card { background: #34495e; color: white; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;}
 .balance-card h2 { font-size: 2.2rem; margin: 10px 0; }
 .income-text { color: #2ecc71; } .expense-text { color: #ff7675; }
-.btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.5); color: white; padding: 5px 15px; border-radius: 20px; cursor: pointer; margin-top: 5px; }
+
+.button-group { display: flex; gap: 10px; margin-top: 10px; }
+.btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.5); color: white; padding: 5px 15px; border-radius: 20px; cursor: pointer; }
 .btn-outline:hover { background: rgba(255,255,255,0.1); }
 
 /* Form */
@@ -350,13 +356,11 @@ input:focus, select:focus { border-color: #3498db; outline: none; }
 .btn-update { background: #f39c12; }
 .btn-sm { background: #ddd; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; }
 
-/* Filter Bar */
+/* List */
 .filter-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
 .search-box { flex: 1; min-width: 200px; }
 .date-range { display: flex; align-items: center; gap: 5px; background: white; padding: 5px; border-radius: 6px; border: 2px solid #ddd; }
 .date-range input { border: none; padding: 5px; width: 130px; font-size: 0.9rem; }
-
-/* List */
 .list-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #34495e; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 .item-left { display: flex; align-items: center; gap: 15px; }
 .date-badge { text-align: center; background: #eee; padding: 5px 10px; border-radius: 6px; min-width: 50px; }
@@ -367,12 +371,10 @@ input:focus, select:focus { border-color: #3498db; outline: none; }
 .tag { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: #e0e0e0; color: #555; }
 .tag.method { background: #dff9fb; color: #22a6b3; }
 .type-tag.transfer { background: #dfe6e9; color: #2d3436; font-weight: bold; }
-
 .amount { font-weight: bold; font-size: 1.2rem; }
 .amount.expense { color: #c0392b; }
 .amount.income { color: #27ae60; }
 .amount.transfer { color: #7f8c8d; } 
-
 .actions { display: flex; gap: 5px; }
 .btn-icon { background: transparent; border: 1px solid #ddd; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .btn-icon.del { color: red; border-color: #ffcccc; }
