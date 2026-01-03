@@ -1,17 +1,20 @@
-import os  # 新增
-from dotenv import load_dotenv  # 新增
-from fastapi import FastAPI, HTTPException
+import os
+import pandas as pd
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pymongo import MongoClient
 from pydantic import BaseModel
 from typing import Optional, List
 from bson import ObjectId
+from datetime import datetime
 
-# 1. 載入 .env 檔案內容
 load_dotenv()
 
 app = FastAPI()
 
+# 設定 CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,83 +22,104 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 2. 從環境變數讀取設定 (如果讀不到，後面的是預設值)
+# 資料庫連線
 mongo_url = os.getenv("MONGODB_URL", "mongodb://localhost:27017/")
-db_name = os.getenv("DB_NAME", "PyMoney")
-
-# 3. 使用讀取到的變數連線
 client = MongoClient(mongo_url)
-db = client[db_name]
+db = client["PyMoney"]
 collection = db["transactions"]
 
-# 1. 設定 CORS (讓前端可以連線)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# 2. 【關鍵修改】連接真正的 MongoDB 資料庫
-# 請確保你的 MongoDB 軟體已經打開 (預設 port 27017)
-client = MongoClient("mongodb://localhost:27017/")
-db = client["PyMoney"]          # 資料庫名稱
-collection = db["transactions"] # 資料表名稱
-
-# Pydantic 模型
+# 資料模型
 class Transaction(BaseModel):
     title: str
     amount: int
     category: str
     date: str
     type: str = "expense"
+    payment_method: str = "Cash" # 新增：付款方式 (現金/卡片)
     note: Optional[str] = None
 
-# 輔助函式：把 MongoDB 的 _id (ObjectId) 轉成字串
 def fix_id(doc):
     doc["id"] = str(doc.pop("_id"))
     return doc
 
-@app.get("/")
-def read_root():
-    return {"message": "PyMoney 後端連線成功！"}
+# --- API 區域 ---
 
-# [READ] 取得所有記帳紀錄
+# 1. [Read] 支援搜尋與篩選
 @app.get("/api/transactions")
-def get_transactions():
-    data = collection.find()
+def get_transactions(
+    keyword: Optional[str] = None, 
+    category: Optional[str] = None
+):
+    query = {}
+    # 如果有傳關鍵字，就用 Regex 做模糊搜尋 (類似 SQL 的 LIKE)
+    if keyword:
+        query["title"] = {"$regex": keyword, "$options": "i"} # i = 忽略大小寫
+    # 如果有傳類別
+    if category and category != "All":
+        query["category"] = category
+
+    data = collection.find(query)
     return [fix_id(doc) for doc in data]
 
-# [CREATE] 新增一筆紀錄
+# 2. [Create] 新增
 @app.post("/api/transactions")
 def create_transaction(tx: Transaction):
-    tx_data = tx.dict()
-    result = collection.insert_one(tx_data)
+    result = collection.insert_one(tx.dict())
     return {"message": "新增成功", "id": str(result.inserted_id)}
 
-# [DELETE] 刪除一筆紀錄
+# 3. [Update] 編輯/更新功能 (新增的功能！)
+@app.put("/api/transactions/{id}")
+def update_transaction(id: str, tx: Transaction):
+    try:
+        # $set 代表只更新指定的欄位
+        result = collection.update_one(
+            {"_id": ObjectId(id)}, 
+            {"$set": tx.dict()}
+        )
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="找不到該筆資料")
+        return {"message": "更新成功"}
+    except Exception:
+        raise HTTPException(status_code=400, detail="更新失敗")
+
+# 4. [Delete] 刪除
 @app.delete("/api/transactions/{id}")
 def delete_transaction(id: str):
-    try:
-        result = collection.delete_one({"_id": ObjectId(id)})
-        if result.deleted_count == 1:
-            return {"message": "刪除成功"}
-        else:
-            raise HTTPException(status_code=404, detail="找不到該筆資料")
-    except Exception:
-         raise HTTPException(status_code=400, detail="ID 格式錯誤")
+    collection.delete_one({"_id": ObjectId(id)})
+    return {"message": "刪除成功"}
 
+# 5. [Dashboard] 圖表統計
 @app.get("/api/dashboard/stats")
 def get_dashboard_stats():
-    # 使用 MongoDB 的強大功能：Aggregation Pipeline (聚合管線)
     pipeline = [
-        # 1. 只找「支出」類型的資料
         {"$match": {"type": "expense"}},
-        # 2. 依照「類別 (category)」分組，並計算總金額
         {"$group": {"_id": "$category", "total": {"$sum": "$amount"}}}
     ]
     result = list(collection.aggregate(pipeline))
+    return {item["_id"]: item["total"] for item in result}
+
+# 6. [Export] 匯出 Excel (新增的功能！)
+@app.get("/api/export")
+def export_excel():
+    # 撈出所有資料
+    data = list(collection.find())
+    if not data:
+        raise HTTPException(status_code=404, detail="沒有資料可匯出")
     
-    # 整理成前端好用的格式： { "Food": 500, "Transport": 100 }
-    stats = {item["_id"]: item["total"] for item in result}
-    return stats
+    # 轉成 DataFrame
+    for doc in data:
+        doc["_id"] = str(doc["_id"]) # 把 ID 轉字串
+    
+    df = pd.DataFrame(data)
+    
+    # 調整欄位順序美觀一點
+    cols = ["date", "title", "amount", "type", "category", "payment_method"]
+    # 確保欄位存在才選取
+    df = df[[c for c in cols if c in df.columns]]
+    
+    # 存成檔案
+    filename = "transactions_export.xlsx"
+    df.to_excel(filename, index=False)
+    
+    # 回傳檔案給瀏覽器下載
+    return FileResponse(filename, filename=filename, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
