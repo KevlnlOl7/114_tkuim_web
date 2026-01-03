@@ -181,3 +181,31 @@ async def import_file(file: UploadFile = File(...)):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=f"匯入失敗: {str(e)}")
+
+@app.get("/api/dashboard/accounts")
+def get_account_stats():
+    pipeline = [
+        {"$group": {
+            "_id": "$payment_method",
+            "balance": {
+                "$sum": {
+                    "$switch": {
+                        "branches": [
+                            # 如果是收入，金額為正
+                            {"case": {"$eq": ["$type", "income"]}, "then": "$amount"},
+                            # 如果是支出，金額變負
+                            {"case": {"$eq": ["$type", "expense"]}, "then": {"$multiply": ["$amount", -1]}},
+                            # 轉帳暫時不影響單一帳戶餘額 (因為我們沒做 轉出/轉入 欄位)
+                            {"case": {"$eq": ["$type", "transfer"]}, "then": 0} 
+                        ],
+                        "default": 0
+                    }
+                }
+            }
+        }},
+        {"$sort": {"_id": 1}} # 依照名稱排序
+    ]
+    
+    result = list(collection.aggregate(pipeline))
+    # 整理成前端好讀的格式: [{"account": "Cash", "balance": 500}, ...]
+    return [{"account": item["_id"], "balance": item["balance"]} for item in result]

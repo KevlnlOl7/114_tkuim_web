@@ -10,6 +10,7 @@ const stats = ref({})
 const trendData = ref({})
 const budgetLimit = ref(0)
 
+
 // 搜尋與篩選
 const keyword = ref('')
 const startDate = ref('')
@@ -33,6 +34,8 @@ const form = ref({
   type: 'expense', payment_method: 'Cash'
 })
 
+const accountBalances = ref([]) // 新增：帳戶餘額
+
 // --- API ---
 const fetchData = async () => {
   try {
@@ -50,6 +53,8 @@ const fetchData = async () => {
     
     const budgetRes = await axios.get('http://127.0.0.1:8000/api/budget')
     budgetLimit.value = budgetRes.data.limit
+    const accountRes = await axios.get('http://127.0.0.1:8000/api/dashboard/accounts')
+    accountBalances.value = accountRes.data
   } catch (error) { console.error(error) }
 }
 
