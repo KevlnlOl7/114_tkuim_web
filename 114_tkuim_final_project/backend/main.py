@@ -1,11 +1,32 @@
+import os  # 新增
+from dotenv import load_dotenv  # 新增
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pymongo import MongoClient
 from pydantic import BaseModel
 from typing import Optional, List
-from pymongo import MongoClient
 from bson import ObjectId
 
+# 1. 載入 .env 檔案內容
+load_dotenv()
+
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 2. 從環境變數讀取設定 (如果讀不到，後面的是預設值)
+mongo_url = os.getenv("MONGODB_URL", "mongodb://localhost:27017/")
+db_name = os.getenv("DB_NAME", "PyMoney")
+
+# 3. 使用讀取到的變數連線
+client = MongoClient(mongo_url)
+db = client[db_name]
+collection = db["transactions"]
 
 # 1. 設定 CORS (讓前端可以連線)
 app.add_middleware(
