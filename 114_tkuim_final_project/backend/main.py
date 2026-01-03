@@ -84,3 +84,18 @@ def delete_transaction(id: str):
             raise HTTPException(status_code=404, detail="找不到該筆資料")
     except Exception:
          raise HTTPException(status_code=400, detail="ID 格式錯誤")
+
+@app.get("/api/dashboard/stats")
+def get_dashboard_stats():
+    # 使用 MongoDB 的強大功能：Aggregation Pipeline (聚合管線)
+    pipeline = [
+        # 1. 只找「支出」類型的資料
+        {"$match": {"type": "expense"}},
+        # 2. 依照「類別 (category)」分組，並計算總金額
+        {"$group": {"_id": "$category", "total": {"$sum": "$amount"}}}
+    ]
+    result = list(collection.aggregate(pipeline))
+    
+    # 整理成前端好用的格式： { "Food": 500, "Transport": 100 }
+    stats = {item["_id"]: item["total"] for item in result}
+    return stats
