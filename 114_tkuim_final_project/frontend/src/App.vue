@@ -1,45 +1,104 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue' // 引入 computed
 import axios from 'axios'
 
-// 1. 定義變數來存資料
 const transactions = ref([])
+const form = ref({
+  title: '',
+  amount: '',
+  category: 'Food',
+  date: new Date().toISOString().split('T')[0],
+  type: 'expense'
+})
 
-// 2. 定義一個函式去後端抓資料
+// [Read]
 const fetchData = async () => {
   try {
-    // 呼叫你的後端 API
     const response = await axios.get('http://127.0.0.1:8000/api/transactions')
-    // 把抓回來的資料存進變數
-    transactions.value = response.data
-    console.log("資料抓取成功:", response.data)
+    transactions.value = response.data.reverse()
+  } catch (error) { console.error(error) }
+}
+
+// [Create]
+const addTransaction = async () => {
+  if (!form.value.title || !form.value.amount) return alert("請輸入完整資訊")
+  try {
+    await axios.post('http://127.0.0.1:8000/api/transactions', {
+      ...form.value, amount: Number(form.value.amount)
+    })
+    alert("新增成功！")
+    fetchData()
+    form.value.title = ''; form.value.amount = ''
+  } catch (error) { alert("新增失敗") }
+}
+
+// [Delete] 新增這個功能！
+const removeTransaction = async (id) => {
+  if(!confirm("確定要刪除這筆紀錄嗎？")) return; // 防呆確認
+  
+  try {
+    await axios.delete(`http://127.0.0.1:8000/api/transactions/${id}`)
+    alert("刪除成功")
+    // 雖然可以重新 fetch，但直接在前端過濾掉比較快，體驗更好
+    transactions.value = transactions.value.filter(t => t.id !== id)
   } catch (error) {
-    console.error("抓取失敗:", error)
-    alert("連線失敗，請確認後端有沒有開！")
+    console.error(error)
+    alert("刪除失敗")
   }
 }
 
-// 3. 當畫面載入時，自動執行抓資料
-onMounted(() => {
-  fetchData()
+// [加分] 計算總金額 (Vue 的 computed 功能)
+const totalAmount = computed(() => {
+  return transactions.value.reduce((sum, item) => {
+    return item.type === 'income' ? sum + item.amount : sum - item.amount
+  }, 0)
 })
+
+onMounted(() => { fetchData() })
 </script>
 
 <template>
   <div class="container">
     <h1>💰 PyMoney 記帳本</h1>
-    
-    <div class="card-list">
-      <p v-if="transactions.length === 0">目前沒有紀錄，趕快去新增一筆吧！</p>
 
-      <div v-else v-for="item in transactions" :key="item.id" class="card">
+    <div class="balance-card">
+      <h3>目前餘額</h3>
+      <h2 :class="totalAmount >= 0 ? 'income' : 'expense'">
+        ${{ totalAmount }}
+      </h2>
+    </div>
+
+    <div class="form-card">
+      <div class="form-row">
+        <select v-model="form.type"><option value="expense">支出 💸</option><option value="income">收入 💰</option></select>
+        <input v-model="form.date" type="date" required />
+      </div>
+      <div class="form-row">
+        <input v-model="form.title" placeholder="消費項目" required />
+        <input v-model="form.amount" type="number" placeholder="金額" required />
+      </div>
+      <div class="form-row">
+        <select v-model="form.category">
+          <option value="Food">食物</option><option value="Transport">交通</option>
+          <option value="Entertainment">娛樂</option><option value="Other">其他</option>
+        </select>
+        <button @click="addTransaction" class="btn-add">新增</button>
+      </div>
+    </div>
+
+    <hr />
+
+    <div class="card-list">
+      <div v-for="item in transactions" :key="item.id" class="card">
         <div class="info">
           <h3>{{ item.title }}</h3>
-          <span class="category">{{ item.category }}</span>
-          <small>{{ item.date }}</small>
+          <span class="category">{{ item.category }}</span> <small>{{ item.date }}</small>
         </div>
-        <div class="amount" :class="item.type">
-          {{ item.type === 'expense' ? '-' : '+' }} ${{ item.amount }}
+        <div class="right-section">
+          <span class="amount" :class="item.type">
+            {{ item.type === 'expense' ? '-' : '+' }} ${{ item.amount }}
+          </span>
+          <button @click="removeTransaction(item.id)" class="btn-delete">❌</button>
         </div>
       </div>
     </div>
@@ -47,55 +106,17 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* 簡單排版 CSS，讓它看起來像個樣子 */
-.container {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 20px;
-  font-family: Arial, sans-serif;
-}
-
-h1 {
-  text-align: center;
-  color: #2c3e50;
-}
-
-.card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid #ddd;
-  padding: 15px;
-  margin-bottom: 10px;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  background: white;
-}
-
-.info h3 {
-  margin: 0;
-  font-size: 1.1rem;
-}
-
-.category {
-  background: #eee;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 0.8rem;
-  color: #666;
-  margin-right: 10px;
-}
-
-.amount {
-  font-weight: bold;
-  font-size: 1.2rem;
-}
-
-.amount.expense {
-  color: #e74c3c; /* 紅色代表支出 */
-}
-
-.amount.income {
-  color: #27ae60; /* 綠色代表收入 */
-}
+/* 基本樣式沿用之前的，新增以下 */
+.container { max-width: 600px; margin: 0 auto; padding: 20px; font-family: sans-serif; }
+.balance-card { text-align: center; margin-bottom: 20px; background: #fff; padding: 10px; border-radius: 8px; border: 2px solid #333; }
+.form-card { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+.form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+input, select { flex: 1; padding: 8px; }
+.btn-add { background: #2ecc71; color: white; border: none; cursor: pointer; }
+.card { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 5px;}
+.right-section { display: flex; align-items: center; gap: 15px; }
+.btn-delete { background: transparent; border: none; cursor: pointer; font-size: 1.2rem; }
+.btn-delete:hover { transform: scale(1.2); }
+.income { color: #27ae60; }
+.expense { color: #c0392b; }
 </style>
