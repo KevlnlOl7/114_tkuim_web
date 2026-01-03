@@ -252,7 +252,7 @@ def get_categories():
     # 回傳整理過的格式
     return [{"id": str(c["_id"]), "name": c["name"], "icon": c.get("icon", "🏷️")} for c in cats]
 
-# [Categories] 新增分類
+# 新增分類
 @app.post("/api/categories")
 def add_category(cat: Category):
     # 檢查是否重複
@@ -262,7 +262,7 @@ def add_category(cat: Category):
     result = categories_collection.insert_one(cat.dict())
     return {"message": "新增成功", "id": str(result.inserted_id)}
 
-# [Categories] 刪除分類
+# 刪除分類
 @app.delete("/api/categories/{id}")
 def delete_category(id: str):
     categories_collection.delete_one({"_id": ObjectId(id)})
