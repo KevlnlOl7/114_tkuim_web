@@ -10,6 +10,7 @@ from pymongo import MongoClient
 from pydantic import BaseModel
 from typing import Optional, List
 from bson import ObjectId
+from pydantic import BaseModel
 
 load_dotenv()
 
@@ -27,6 +28,7 @@ client = MongoClient(mongo_url)
 db = client["PyMoney"]
 collection = db["transactions"]
 settings_collection = db["settings"]
+categories_collection = db["categories"]
 
 class Transaction(BaseModel):
     title: str
@@ -40,11 +42,29 @@ class Transaction(BaseModel):
 class BudgetSetting(BaseModel):
     limit: int
 
+class LoginRequest(BaseModel):
+    password: str
+
+class Category(BaseModel):
+    name: str
+    icon: str = "🏷️" # 預設圖示
+
 def fix_id(doc):
     doc["id"] = str(doc.pop("_id"))
     return doc
 
 # --- API 區域 ---
+# [Security] 登入驗證 API (新功能!)
+@app.post("/api/login")
+def login(request: LoginRequest):
+    # 從 .env 讀取正確密碼 (如果沒設定，預設是 1234)
+    correct_password = os.getenv("APP_PASSWORD", "1234")
+    
+    if request.password == correct_password:
+        return {"success": True, "message": "登入成功"}
+    else:
+        # 回傳 401 Unauthorized 錯誤
+        raise HTTPException(status_code=401, detail="密碼錯誤")
 
 # [交易] 讀取
 @app.get("/api/transactions")
@@ -182,6 +202,7 @@ async def import_file(file: UploadFile = File(...)):
         print(e)
         raise HTTPException(status_code=500, detail=f"匯入失敗: {str(e)}")
 
+# [Dashboard] 帳戶餘額統計 (新功能!)
 @app.get("/api/dashboard/accounts")
 def get_account_stats():
     pipeline = [
@@ -209,3 +230,40 @@ def get_account_stats():
     result = list(collection.aggregate(pipeline))
     # 整理成前端好讀的格式: [{"account": "Cash", "balance": 500}, ...]
     return [{"account": item["_id"], "balance": item["balance"]} for item in result]
+
+    # [Categories] 取得分類列表 (如果空的，自動初始化)
+@app.get("/api/categories")
+def get_categories():
+    cats = list(categories_collection.find())
+    
+    # 如果資料庫完全沒分類，幫使用者初始化預設值
+    if not cats:
+        defaults = [
+            {"name": "Food", "icon": "🍔"},
+            {"name": "Transport", "icon": "🚌"},
+            {"name": "Entertainment", "icon": "🎬"},
+            {"name": "Rent", "icon": "🏠"},
+            {"name": "Salary", "icon": "💼"},
+            {"name": "Other", "icon": "✨"},
+        ]
+        categories_collection.insert_many(defaults)
+        cats = list(categories_collection.find())
+    
+    # 回傳整理過的格式
+    return [{"id": str(c["_id"]), "name": c["name"], "icon": c.get("icon", "🏷️")} for c in cats]
+
+# [Categories] 新增分類
+@app.post("/api/categories")
+def add_category(cat: Category):
+    # 檢查是否重複
+    if categories_collection.find_one({"name": cat.name}):
+        raise HTTPException(status_code=400, detail="分類名稱已存在")
+    
+    result = categories_collection.insert_one(cat.dict())
+    return {"message": "新增成功", "id": str(result.inserted_id)}
+
+# [Categories] 刪除分類
+@app.delete("/api/categories/{id}")
+def delete_category(id: str):
+    categories_collection.delete_one({"_id": ObjectId(id)})
+    return {"message": "刪除成功"}
