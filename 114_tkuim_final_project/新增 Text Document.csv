@@ -1,0 +1,16 @@
+date,title,amount,category,type,payment_method
+2024-04-25,4月薪資,45000,Salary,income,Bank
+2024-05-01,5月房租,12000,Rent,expense,Bank
+2024-05-02,全聯採購,850,Food,expense,Credit Card
+2024-05-03,加油,150,Transport,expense,Cash
+2024-05-05,Netflix訂閱,390,Entertainment,expense,Credit Card
+2024-05-08,同事聚餐,600,Food,expense,LinePay
+2024-05-10,買新滑鼠,1200,Other,expense,Credit Card
+2024-05-15,轉帳給媽媽,5000,Other,transfer,Bank
+2024-05-20,中樂透小獎,2000,Other,income,Cash
+2024-05-25,5月薪資,45000,Salary,income,Bank
+2024-05-26,看電影(沙丘2),700,Entertainment,expense,Cash
+2024-06-01,6月房租,12000,Rent,expense,Bank
+2024-06-02,買飲料,60,Food,expense,LinePay
+2024-06-03,捷運儲值,500,Transport,expense,Cash
+2024-06-05,健身房月費,1000,Entertainment,expense,Credit Card
