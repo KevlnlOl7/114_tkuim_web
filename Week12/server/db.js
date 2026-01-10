@@ -15,6 +15,10 @@ export async function connect() {
   await client.connect();
   db = client.db(dbName);
   console.log(`Connected to MongoDB: ${dbName}`);
+
+  // Create indexes
+  const { createIndexes } = await import('./repositories/users.js');
+  await createIndexes();
 }
 
 export function getDb() {

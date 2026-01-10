@@ -1,94 +1,71 @@
-@baseUrl = http://localhost:5000
-
-### 1. Register Student
-# @name registerStudent
-POST {{baseUrl}}/auth/signup
+### Signup Admin
+POST http://localhost:5500/auth/signup
 Content-Type: application/json
 
 {
-    "email": "student1@example.com",
-    "password": "password123",
-    "role": "student"
+  "email": "admin@test.com",
+  "password": "123",
+  "role": "admin"
 }
 
-### 2. Login Student
-# @name loginStudent
-POST {{baseUrl}}/auth/login
+### Login Admin
+# @name adminLogin
+POST http://localhost:5500/auth/login
 Content-Type: application/json
 
 {
-    "email": "student1@example.com",
-    "password": "password123"
+  "email": "admin@test.com",
+  "password": "123"
 }
 
-@studentToken = {{loginStudent.response.body.token}}
-
-### 3. Register Admin
-# @name registerAdmin
-POST {{baseUrl}}/auth/signup
+### Signup Student
+POST http://localhost:5500/auth/signup
 Content-Type: application/json
 
 {
-    "email": "admin1@example.com",
-    "password": "password123",
-    "role": "admin"
+  "email": "student@test.com",
+  "password": "123",
+  "role": "student"
 }
 
-### 4. Login Admin
-# @name loginAdmin
-POST {{baseUrl}}/auth/login
+### Login Student
+# @name studentLogin
+POST http://localhost:5500/auth/login
 Content-Type: application/json
 
 {
-    "email": "admin1@example.com",
-    "password": "password123"
+  "email": "student@test.com",
+  "password": "123"
 }
 
-@adminToken = {{loginAdmin.response.body.token}}
+### Risk Experience (No Auth - Should Fail)
+GET http://localhost:5500/api/signup
 
-### 5. Get Signups (Unauthenticated - Should Fail)
-GET {{baseUrl}}/api/signup
+### Risk Experience (Delete without Auth - Should Fail)
+DELETE http://localhost:5500/api/signup/randomid
 
-### 6. Post Signup (Student)
-# @name createStudentSignup
-POST {{baseUrl}}/api/signup
-Authorization: Bearer {{studentToken}}
+### Create Data (Student)
+POST http://localhost:5500/api/signup
 Content-Type: application/json
+Authorization: Bearer {{studentLogin.response.body.token}}
 
 {
-    "content": "Student's application content"
+  "content": "Student's Project"
 }
 
-@studentSignupId = {{createStudentSignup.response.body._id}}
-
-### 7. Post Signup (Admin)
-# @name createAdminSignup
-POST {{baseUrl}}/api/signup
-Authorization: Bearer {{adminToken}}
+### Create Data (Admin)
+POST http://localhost:5500/api/signup
 Content-Type: application/json
+Authorization: Bearer {{adminLogin.response.body.token}}
 
 {
-    "content": "Admin's application content"
+  "content": "Admin's Announcement"
 }
 
-@adminSignupId = {{createAdminSignup.response.body._id}}
+### Get Data (Student - Sees Only Own)
+GET http://localhost:5500/api/signup
+Authorization: Bearer {{studentLogin.response.body.token}}
 
-### 8. Get Signups (Student - Should see only own)
-GET {{baseUrl}}/api/signup
-Authorization: Bearer {{studentToken}}
-
-### 9. Get Signups (Admin - Should see all)
-GET {{baseUrl}}/api/signup
-Authorization: Bearer {{adminToken}}
-
-### 10. Student try delete Admin's signup (Should Fail 403)
-DELETE {{baseUrl}}/api/signup/{{adminSignupId}}
-Authorization: Bearer {{studentToken}}
-
-### 11. Student delete own signup (Should Success 204)
-DELETE {{baseUrl}}/api/signup/{{studentSignupId}}
-Authorization: Bearer {{studentToken}}
-
-### 12. Admin delete any signup
-DELETE {{baseUrl}}/api/signup/{{adminSignupId}}
-Authorization: Bearer {{adminToken}}
+### Get Data (Admin - Sees All)
+GET http://localhost:5500/api/signup
+Authorization: Bearer {{adminLogin.response.body.token}}

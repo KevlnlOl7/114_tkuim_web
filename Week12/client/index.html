@@ -1,93 +1,75 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Course Management System</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>Week 12 Auth System</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <div class="container">
-        <div class="card">
+    <div id="app">
+        <h1>Week 12 Authentication System</h1>
+
+        <!-- Auth Section -->
+        <div id="auth-section">
+            <div class="card">
+                <h2>Login</h2>
+                <form id="login-form">
+                    <input type="email" id="login-email" placeholder="Email" required>
+                    <input type="password" id="login-password" placeholder="Password" required>
+                    <button type="submit">Login</button>
+                    <div class="message" id="login-message"></div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Register</h2>
+                <form id="signup-form">
+                    <input type="email" id="signup-email" placeholder="Email" required>
+                    <input type="password" id="signup-password" placeholder="Password" required>
+                    <select id="signup-role">
+                        <option value="student">Student</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    <button type="submit">Sign Up</button>
+                    <div class="message" id="signup-message"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="hidden">
             <div class="header">
-                <h1 style="margin:0; font-size:1.5rem;">Week 12 System</h1>
-                <div id="status" style="display: flex; align-items: center; gap: 10px;">
-                    <span id="userInfo" style="font-size: 0.9rem; color: #666;">Not logged in</span>
-                    <button id="logoutBtn" class="hidden">Logout</button>
+                <span>Welcome, <span id="user-email-display"></span> (<span id="user-role-display"></span>)</span>
+                <button id="logout-btn" class="danger">Logout</button>
+            </div>
+
+            <div class="card">
+                <h3>My Data</h3>
+                <div class="input-group">
+                    <input type="text" id="new-data-content" placeholder="Enter some content...">
+                    <button id="add-data-btn">Add Data</button>
+                </div>
+                <div id="data-list">
+                    <!-- Data items will be rendered here -->
                 </div>
             </div>
 
-            <div id="authSection" class="auth-container">
-                <div class="auth-box">
-                    <h2>Login</h2>
-                    <form id="loginForm">
-                        <label>Email <input type="email" id="loginEmail" required
-                                placeholder="user@example.com"></label>
-                        <label>Password <input type="password" id="loginPassword" required placeholder="••••••"></label>
-                        <button type="submit">Log In</button>
-                    </form>
-                </div>
-                <div
-                    style="width: 1px; background: rgba(0,0,0,0.1); display: none; @media(min-width: 768px){display:block;}">
-                </div>
-                <div class="auth-box">
-                    <h2>Register</h2>
-                    <form id="registerForm">
-                        <label>Email <input type="email" id="regEmail" required placeholder="new@example.com"></label>
-                        <label>Password <input type="password" id="regPassword" required placeholder="••••••"></label>
-                        <label>Role
-                            <select id="regRole">
-                                <option value="student">Student</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </label>
-                        <button type="submit" style="background: #10b981;">Create Account</button>
-                    </form>
+            <!-- Admin Logs Section -->
+            <div id="admin-logs-section" class="card hidden" style="margin-top: 20px;">
+                <h3>Operation Logs (Admin Only)</h3>
+                <button id="refresh-logs-btn">Refresh Logs</button>
+                <div id="logs-list"
+                    style="margin-top: 10px; max-height: 300px; overflow-y: auto; background: #f5f5f5; padding: 10px;">
                 </div>
             </div>
-
-            <div id="mainApp" class="hidden">
-                <div
-                    style="background: rgba(255,255,255,0.5); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-                    <h2 style="font-size: 1.2rem; margin-bottom: 15px;">Add New Entry</h2>
-                    <form id="addSignupForm" style="flex-direction: row; align-items: flex-end;">
-                        <label style="flex:1;">Content
-                            <input type="text" id="signupContent" required
-                                placeholder="Enter course notes or details..." style="width: 100%;">
-                        </label>
-                        <button type="submit">Add</button>
-                    </form>
-                </div>
-
-                <div style="background: rgba(255,255,255,0.5); padding: 20px; border-radius: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h2 style="font-size: 1.2rem; margin: 0;">Records</h2>
-                        <button id="refreshBtn" style="background: transparent; color: #666; padding: 5px;">↻
-                            Refresh</button>
-                    </div>
-                    <table id="signupTable">
-                        <thead>
-                            <tr>
-                                <th>Content</th>
-                                <th>Owner</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="message"></div>
         </div>
     </div>
-
-    <script src="js/main.js"></script>
+    <script src="login.js"></script>
+    <script src="signup_form.js"></script>
+    <script src="app.js"></script>
 </body>
 
 </html>
