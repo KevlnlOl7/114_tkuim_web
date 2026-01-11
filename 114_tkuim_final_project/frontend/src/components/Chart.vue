@@ -5,25 +5,21 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
-const props = defineProps(['stats'])
+const props = defineProps(['stats', 'categories'])
 
-// 類別對應的顏色（確保足夠多的顏色）
-const categoryColors = {
-  'Food': '#E74C3C',
-  'Transport': '#3498DB',
-  'Entertainment': '#9B59B6',
-  'Rent': '#F1C40F',
-  'Salary': '#2ECC71',
-  'Other': '#95A5A6',
-  // 備用顏色
-  'default': ['#1ABC9C', '#E67E22', '#34495E', '#16A085', '#27AE60', '#2980B9', '#8E44AD', '#C0392B']
-}
+const defaultColors = ['#1ABC9C', '#E67E22', '#34495E', '#16A085', '#27AE60', '#2980B9', '#8E44AD', '#C0392B']
 
 const chartData = computed(() => {
   const labels = Object.keys(props.stats)
-  const colors = labels.map((label, index) => 
-    categoryColors[label] || categoryColors.default[index % categoryColors.default.length]
-  )
+  const colors = labels.map((label, index) => {
+    // Try to find color in categories prop
+    if (props.categories) {
+        const cat = props.categories.find(c => c.name === label)
+        if (cat) return cat.color
+    }
+    // Fallback
+    return defaultColors[index % defaultColors.length]
+  })
   
   return {
     labels,

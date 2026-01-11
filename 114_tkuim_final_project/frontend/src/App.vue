@@ -4,6 +4,7 @@ import axios from 'axios'
 import Chart from './components/Chart.vue'
 import BarChart from './components/BarChart.vue'
 import CalendarView from './components/CalendarView.vue'
+import CategoryManager from './components/CategoryManager.vue'
 import LoginPage from './components/LoginPage.vue'
 import RegisterPage from './components/RegisterPage.vue'
 import UserManager from './components/UserManager.vue'
@@ -14,6 +15,8 @@ const isLoggedIn = ref(false)
 const currentUser = ref(null)
 const showUserManager = ref(false)
 const showCalendar = ref(false)
+const showCategoryManager = ref(false)
+const categories = ref([])
 
 // 重設密碼 Modal (從 Email 連結)
 const showResetPasswordModal = ref(false)
@@ -96,10 +99,92 @@ const form = ref({
   title: '', amount: '', category: 'Food',
   date: new Date().toISOString().split('T')[0],
   type: 'expense', payment_method: 'Cash',
-  note: ''
+  target_account: '',
+  note: '',
+  currency: 'TWD', foreign_amount: '', exchange_rate: 1
+})
+
+
+
+const currencyOptions = [
+  { code: 'TWD', name: '新台幣' },
+  { code: 'USD', name: '美元' },
+  { code: 'JPY', name: '日圓' },
+  { code: 'EUR', name: '歐元' },
+  { code: 'KRW', name: '韓元' },
+  { code: 'CNY', name: '人民幣' },
+  { code: 'AUD', name: '澳幣' },
+  { code: 'CAD', name: '加幣' },
+  { code: 'GBP', name: '英鎊' },
+  { code: 'HKD', name: '港幣' },
+  { code: 'SGD', name: '新加坡幣' },
+  { code: 'THB', name: '泰銖' },
+  { code: 'VND', name: '越南盾' },
+  { code: 'PHP', name: '菲披索' },
+  { code: 'MYR', name: '馬幣' },
+  { code: 'IDR', name: '印尼盾' },
+]
+
+const rateUpdatedAt = ref('')
+
+watch(() => form.value.currency, async (newVal) => {
+  if (newVal === 'TWD') {
+    form.value.exchange_rate = 1
+    form.value.foreign_amount = ''
+    rateUpdatedAt.value = ''
+    return
+  }
+  try {
+    const res = await axios.get(`http://127.0.0.1:8000/api/rates/${newVal}`)
+    form.value.exchange_rate = res.data.rate
+    // Convert UTC to Local Time (Force Taipei)
+    const utc = res.data.updated_at
+    if (utc) {
+      const d = new Date(utc + (utc.includes('UTC') ? '' : ' UTC'))
+      rateUpdatedAt.value = d.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false }) + ' (台北時間)'
+    } else {
+      rateUpdatedAt.value = ''
+    }
+    if (form.value.foreign_amount) {
+      form.value.amount = Math.round(form.value.foreign_amount * form.value.exchange_rate)
+    }
+  } catch (e) { console.error(e) }
+})
+
+watch(() => [form.value.foreign_amount, form.value.exchange_rate], ([fa, rate]) => {
+  if (form.value.currency !== 'TWD' && fa && rate) {
+    form.value.amount = Math.round(fa * rate)
+  }
+})
+
+const availableCategories = computed(() => {
+  return categories.value.filter(c => c.type === form.value.type)
 })
 
 const accountBalances = ref([]) // 帳戶餘額
+
+const currentLocale = ref('zh-TW')
+const messages = {
+  'zh-TW': {
+     item_desc: '項目說明', amount: '金額', date: '日期', category: '分類',
+     note: '備註', type: '類型', account: '支付/帳戶',
+     from_account: '轉出帳戶', to_account: '轉入帳戶',
+     rate: '匯率', to_twd: '折合台幣', updated_at: '更新',
+     submit: '確認新增', update: '完成修改', manage: '管理',
+     expense: '支出', income: '收入', transfer: '轉帳',
+     search: '關鍵字', empty: '無資料'
+  },
+  'en-US': {
+     item_desc: 'Title', amount: 'Amount', date: 'Date', category: 'Category',
+     note: 'Note', type: 'Type', account: 'Account',
+     from_account: 'From Account', to_account: 'To Account',
+     rate: 'Rate', to_twd: 'in TWD', updated_at: 'Updated',
+     submit: 'Add', update: 'Update', manage: 'Manage',
+     expense: 'Expense', income: 'Income', transfer: 'Transfer',
+     search: 'Search...', empty: 'No Data'
+  }
+}
+const t = (key) => messages[currentLocale.value][key] || key
 
 // --- 邀請碼相關 ---
 const showInviteModal = ref(false)
@@ -247,6 +332,8 @@ const fetchData = async () => {
     budgetLimit.value = budgetRes.data.limit
     const accountRes = await axios.get('http://127.0.0.1:8000/api/dashboard/accounts')
     accountBalances.value = accountRes.data
+    
+    await fetchCategories()
   } catch (error) { 
     console.error(error) 
   } finally {
@@ -254,8 +341,27 @@ const fetchData = async () => {
   }
 }
 
+const fetchCategories = async () => {
+  try {
+    let url = 'http://127.0.0.1:8000/api/categories'
+    // if (currentUser.value) url += `?user_id=${currentUser.value.id}` // Consider if we need to filter or if backend handles it
+    // Actually backend expects user_id param to show USER specific + Default.
+    // But currentUser might be null if strictly following flow, but fetchData is called after login.
+    if (currentUser.value) url += `?user_id=${currentUser.value.id}`
+    const res = await axios.get(url)
+    categories.value = res.data
+  } catch (err) { console.error(err) }
+}
+
 const handleSubmit = async () => {
   if (!form.value.title || !form.value.amount) return alert("請輸入完整資訊")
+  
+  // Transfer Validation
+  if (form.value.type === 'transfer') {
+    if (!form.value.target_account) return alert("請選擇轉入帳戶")
+    if (form.value.payment_method === form.value.target_account) return alert("轉出與轉入帳戶不能相同")
+  }
+
   const payload = { ...form.value, amount: Number(form.value.amount) }
   try {
     if (isEditing.value) {
@@ -312,6 +418,7 @@ const startEdit = (item) => {
   isEditing.value = true
   editId.value = item.id
   form.value = { ...item }
+  if(!form.value.currency) form.value.currency = 'TWD'
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 const cancelEdit = () => { isEditing.value = false; editId.value = null; resetForm() }
@@ -320,7 +427,9 @@ const resetForm = () => {
     title: '', amount: '', category: 'Food',
     date: new Date().toISOString().split('T')[0],
     type: 'expense', payment_method: 'Cash',
-    note: ''
+    target_account: '',
+    note: '',
+    currency: 'TWD', foreign_amount: '', exchange_rate: 1
   }
 }
 
@@ -515,6 +624,10 @@ const handleResetPassword = async () => {
           </span>
         </div>
         <div class="header-actions">
+          <select v-model="currentLocale" style="margin-right:8px; padding:4px; border-radius:4px;">
+            <option value="zh-TW">中文</option>
+            <option value="en-US">English</option>
+          </select>
           <!-- 深色模式切換 -->
           <button @click="toggleTheme" class="btn-theme">
             {{ isDarkMode ? '☀️' : '🌙' }}
@@ -645,7 +758,7 @@ const handleResetPassword = async () => {
         </div>
 
         <div class="card chart-card">
-          <Chart :stats="stats" />
+          <Chart :stats="stats" :categories="categories" />
         </div>
         
         <div class="card bar-chart-card full-width-card">
@@ -664,9 +777,9 @@ const handleResetPassword = async () => {
             <div class="input-group">
               <label>類型</label>
               <select v-model="form.type">
-                <option value="expense">支出 💸</option>
-                <option value="income">收入 💰</option>
-                <option value="transfer">轉帳 🔄</option>
+                <option value="expense">{{ t('expense') }} 💸</option>
+                <option value="income">{{ t('income') }} 💰</option>
+                <option value="transfer">{{ t('transfer') }} 🔄</option>
               </select>
             </div>
             <div class="input-group">
@@ -681,7 +794,7 @@ const handleResetPassword = async () => {
               <input v-model="form.date" type="date" required />
             </div>
             <div class="input-group">
-              <label>支付/帳戶</label>
+              <label>{{ form.type === 'transfer' ? t('from_account') : t('account') }}</label>
               <select v-model="form.payment_method">
                 <option value="Cash">現金</option>
                 <option value="Credit Card">信用卡</option>
@@ -692,35 +805,67 @@ const handleResetPassword = async () => {
           </div>
           <div class="form-row">
             <div class="input-group flex-2">
-              <label>項目說明</label>
-              <input v-model="form.title" placeholder="例如: 提款、午餐" required />
+              <label>{{ t('item_desc') }}</label>
+              <input v-model="form.title" placeholder="..." required />
             </div>
             <div class="input-group">
-              <label>金額</label>
-              <input v-model="form.amount" type="number" placeholder="$" required />
+              <label>{{ t('amount') }}</label>
+              <div style="display: flex; gap: 5px;">
+                <select v-model="form.currency" style="width: 140px;">
+                  <option v-for="c in currencyOptions" :key="c.code" :value="c.code">
+                    {{ c.code }} {{ c.name }}
+                  </option>
+                </select>
+                <input v-if="form.currency === 'TWD'" v-model="form.amount" type="number" placeholder="NT$" required style="flex:1;" />
+                <input v-else v-model="form.foreign_amount" type="number" :placeholder="form.currency" required style="flex:1;" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row" v-if="form.currency !== 'TWD'">
+            <div class="input-group">
+                <label>{{ t('rate') }} (1 {{form.currency}} ≈ ? TWD) <span v-if="rateUpdatedAt" style="font-size:0.7rem; color:#888;">({{ t('updated_at') }}: {{rateUpdatedAt}})</span></label>
+                <input v-model="form.exchange_rate" type="number" step="0.0001" placeholder="Exchange Rate" />
+            </div>
+            <div class="input-group">
+                <label>{{ t('to_twd') }}</label>
+                <input :value="Math.round(form.foreign_amount * form.exchange_rate) || 0" disabled style="background:#f0f0f0;" />
             </div>
           </div>
           <div class="form-row" v-if="form.type !== 'transfer'">
             <div class="input-group flex-full">
-              <label>分類</label>
+              <div class="category-label-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                <label style="margin:0;">{{ t('category') }}</label>
+                <button type="button" @click="showCategoryManager = true" style="background:none; border:none; color:#667eea; cursor:pointer; font-size:0.85rem;">⚙️ {{ t('manage') }}</button>
+              </div>
               <select v-model="form.category">
-                <option value="Food">🍔 食物</option>
-                <option value="Transport">🚌 交通</option>
-                <option value="Entertainment">🎬 娛樂</option>
-                <option value="Rent">🏠 房租</option>
-                <option value="Salary">💼 薪水</option>
-                <option value="Other">✨ 其他</option>
+                <option v-for="cat in availableCategories" :key="cat.name" :value="cat.name">
+                  {{ cat.icon }} {{ cat.name }}
+                </option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-row" v-if="form.type === 'transfer'">
+            <div class="input-group flex-full">
+              <label>{{ t('to_account') }}</label>
+              <select v-model="form.target_account" required>
+                <option value="" disabled>請選擇</option>
+                <option value="Cash">現金</option>
+                <option value="Credit Card">信用卡</option>
+                <option value="Bank">銀行帳戶</option>
+                <option value="LinePay">LinePay</option>
               </select>
             </div>
           </div>
           <div class="form-row">
             <div class="input-group flex-full">
-              <label>📝 備註 (選填)</label>
-              <textarea v-model="form.note" placeholder="額外說明..." rows="2" class="note-textarea"></textarea>
+              <label>📝 {{ t('note') }} (選填)</label>
+              <textarea v-model="form.note" placeholder="..." rows="2" class="note-textarea"></textarea>
             </div>
           </div>
           <button @click="handleSubmit" class="btn-submit" :class="{ 'btn-update': isEditing }">
-            {{ isEditing ? '完成修改' : '確認新增' }}
+            {{ isEditing ? t('update') : t('submit') }}
           </button>
         </div>
       </div>
@@ -752,7 +897,7 @@ const handleResetPassword = async () => {
                 <div class="item-title">{{ item.title }}</div>
                 <div class="tags">
                   <span class="tag type-tag" :class="item.type">
-                    {{ item.type === 'transfer' ? '轉帳' : item.category }}
+                    {{ item.type === 'transfer' ? t('transfer') : item.category }}
                   </span>
                   <span class="tag method">{{ item.payment_method }}</span>
                 </div>
@@ -760,8 +905,11 @@ const handleResetPassword = async () => {
               </div>
             </div>
             <div class="item-right">
-              <span class="amount" :class="item.type">
-                {{ item.type === 'expense' ? '-' : (item.type === 'income' ? '+' : '') }} ${{ item.amount }}
+              <span class="amount" :class="item.type" style="display:flex; flex-direction:column; align-items:flex-end;">
+                <span v-if="item.currency && item.currency !== 'TWD'" style="font-size: 0.75rem; color: #888;">
+                    {{ item.currency }} {{ item.foreign_amount }}
+                </span>
+                <span>{{ item.type === 'expense' ? '-' : (item.type === 'income' ? '+' : '') }} ${{ item.amount }}</span>
               </span>
               <div class="actions">
                 <button @click="duplicateTransaction(item)" class="btn-icon copy" title="複製">📋</button>
@@ -773,6 +921,13 @@ const handleResetPassword = async () => {
         </div>
       </div>
     </div>
+    <CategoryManager 
+      :show="showCategoryManager" 
+      :categories="categories" 
+      :currentUser="currentUser"
+      @close="showCategoryManager = false" 
+      @updated="fetchCategories" 
+    />
   </div>
 </template>
 
@@ -975,15 +1130,17 @@ input:focus, select:focus { border-color: #3498db; outline: none; }
 
 /* Date Shortcuts */
 .date-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.date-label-row label { margin-bottom: 0; }
 .date-shortcuts { display: flex; gap: 5px; }
 .date-chip { 
   font-size: 0.75rem; 
-  padding: 2px 8px; 
+  padding: 1px 6px; 
   background: #e0e0e0; 
   border-radius: 12px; 
   cursor: pointer; 
   color: #555; 
-  transition: all 0.2s; 
+  transition: all 0.2s;
+  line-height: 1.2;
 }
 .date-chip:hover { background: #b2bec3; color: white; }
 :global(.dark) .date-chip { background: #2d3748; color: #a0a0a0; }

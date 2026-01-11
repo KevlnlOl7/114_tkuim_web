@@ -12,6 +12,9 @@ from pymongo import MongoClient
 from pydantic import BaseModel
 from typing import Optional, List
 from bson import ObjectId
+import urllib.request
+import json
+import time
 
 from pathlib import Path
 
@@ -20,6 +23,19 @@ env_path = Path(__file__).parent / '.env'
 load_dotenv(env_path)
 
 app = FastAPI()
+
+@app.on_event("startup")
+def init_db():
+    if categories_collection.count_documents({}) == 0:
+        defaults = [
+            {"name": "Food", "icon": "🍔", "type": "expense", "color": "#E74C3C", "is_default": True},
+            {"name": "Transport", "icon": "🚌", "type": "expense", "color": "#3498DB", "is_default": True},
+            {"name": "Entertainment", "icon": "🎮", "type": "expense", "color": "#9B59B6", "is_default": True},
+            {"name": "Rent", "icon": "🏠", "type": "expense", "color": "#F1C40F", "is_default": True},
+            {"name": "Salary", "icon": "💰", "type": "income", "color": "#2ECC71", "is_default": True},
+            {"name": "Other", "icon": "✨", "type": "expense", "color": "#95A5A6", "is_default": True},
+        ]
+        categories_collection.insert_many(defaults)
 
 app.add_middleware(
     CORSMiddleware,
@@ -60,6 +76,18 @@ class Transaction(BaseModel):
     type: str = "expense" 
     payment_method: str = "Cash"
     note: Optional[str] = None
+    target_account: Optional[str] = None # 轉入帳戶
+    currency: str = "TWD"
+    foreign_amount: Optional[float] = None
+    exchange_rate: Optional[float] = None
+
+class Category(BaseModel):
+    name: str
+    icon: str
+    type: str  # 'expense' or 'income'
+    color: str
+    is_default: bool = False
+    user_id: Optional[str] = None
 
 class BudgetSetting(BaseModel):
     limit: int
@@ -569,6 +597,43 @@ def set_budget(budget: BudgetSetting):
     )
     return {"message": "預算設定成功"}
 
+# [分類] 取得
+@app.get("/api/categories")
+def get_categories(user_id: Optional[str] = None):
+    query = {"is_default": True}
+    if user_id:
+        query = {"$or": [{"is_default": True}, {"user_id": user_id}]}
+    
+    cats = categories_collection.find(query)
+    return [fix_id(c) for c in cats]
+
+# [分類] 新增
+@app.post("/api/categories")
+def create_category(cat: Category):
+    # Ensure is_default is False for user created
+    cat.is_default = False
+    new_cat = cat.dict()
+    res = categories_collection.insert_one(new_cat)
+    return {"id": str(res.inserted_id), "message": "分類新增成功"}
+
+# [分類] 刪除
+@app.delete("/api/categories/{id}")
+def delete_category(id: str):
+    cat = categories_collection.find_one({"_id": ObjectId(id)})
+    if not cat:
+        raise HTTPException(status_code=404, detail="找不到分類")
+    
+    item = categories_collection.find_one({"_id": ObjectId(id)})
+    if not item:
+        raise HTTPException(status_code=404, detail="找不到分類")
+    
+    # 允許刪除預設分類 (User request)
+    # if item.get("is_default"):
+    #    raise HTTPException(status_code=400, detail="無法刪除預設分類")
+    
+    categories_collection.delete_one({"_id": ObjectId(id)})
+    return {"message": "分類已刪除"}
+
 # [匯出] Excel
 @app.get("/api/export")
 def export_excel():
@@ -623,31 +688,49 @@ async def import_file(file: UploadFile = File(...)):
 # [Dashboard] 帳戶餘額統計 (新功能!)
 @app.get("/api/dashboard/accounts")
 def get_account_stats():
-    pipeline = [
+    # 1. 計算 Source (付款/轉出) 造成的餘額變動
+    pipeline_source = [
         {"$group": {
             "_id": "$payment_method",
             "balance": {
                 "$sum": {
                     "$switch": {
                         "branches": [
-                            # 如果是收入，金額為正
                             {"case": {"$eq": ["$type", "income"]}, "then": "$amount"},
-                            # 如果是支出，金額變負
                             {"case": {"$eq": ["$type", "expense"]}, "then": {"$multiply": ["$amount", -1]}},
-                            # 轉帳暫時不影響單一帳戶餘額 (因為我們沒做 轉出/轉入 欄位)
-                            {"case": {"$eq": ["$type", "transfer"]}, "then": 0} 
+                            {"case": {"$eq": ["$type", "transfer"]}, "then": {"$multiply": ["$amount", -1]}} # 轉出扣款
                         ],
                         "default": 0
                     }
                 }
             }
-        }},
-        {"$sort": {"_id": 1}} # 依照名稱排序
+        }}
     ]
+    source_res = list(collection.aggregate(pipeline_source))
     
-    result = list(collection.aggregate(pipeline))
-    # 整理成前端好讀的格式: [{"account": "Cash", "balance": 500}, ...]
-    return [{"account": item["_id"], "balance": item["balance"]} for item in result]
+    # 2. 計算 Target (轉入) 造成的餘額增加
+    pipeline_target = [
+        {"$match": {"type": "transfer", "target_account": {"$exists": True, "$ne": None}}},
+        {"$group": {
+            "_id": "$target_account", 
+            "balance": {"$sum": "$amount"} # 轉入增加
+        }}
+    ]
+    target_res = list(collection.aggregate(pipeline_target))
+    
+    # 3. 合併結果
+    balances = {}
+    for item in source_res:
+        if item["_id"]:
+            balances[item["_id"]] = balances.get(item["_id"], 0) + item["balance"]
+        
+    for item in target_res:
+        if item["_id"]:
+            balances[item["_id"]] = balances.get(item["_id"], 0) + item["balance"]
+        
+    # 轉回 List + 排序
+    result = [{"account": k, "balance": v} for k, v in balances.items()]
+    return sorted(result, key=lambda x: x["account"])
 
     # [Categories] 取得分類列表 (如果空的，自動初始化)
 @app.get("/api/categories")
@@ -685,3 +768,47 @@ def add_category(cat: Category):
 def delete_category(id: str):
     categories_collection.delete_one({"_id": ObjectId(id)})
     return {"message": "刪除成功"}
+
+# --- 匯率 API ---
+_rates_cache = {"timestamp": 0, "data": {}}
+
+@app.get("/api/rates/{target}")
+def get_rate(target: str):
+    global _rates_cache
+    target = target.upper()
+    now = time.time()
+    
+    # 簡單快取 (1小時)
+    if now - _rates_cache["timestamp"] > 3600 or "USDTWD" not in _rates_cache["data"]:
+        try:
+            with urllib.request.urlopen("https://tw.rter.info/capi.php") as url:
+                _rates_cache["data"] = json.loads(url.read().decode())
+                _rates_cache["timestamp"] = now
+        except Exception as e:
+            # print(f"Rate fetch failed: {e}")
+            pass
+            
+    data = _rates_cache["data"]
+    
+    # Default fallback if empty
+    if "USDTWD" not in data:
+         return {"rate": 1.0}
+         
+    usd_twd = data["USDTWD"]["Exrate"]
+    utc_str = data["USDTWD"].get("UTC", "")
+    
+    if target == "TWD":
+        return {"rate": 1.0}
+
+    if target == "USD":
+        return {"rate": usd_twd, "updated_at": utc_str}
+    
+    key = f"USD{target}"
+    if key not in data:
+        return {"rate": 1.0, "updated_at": utc_str}
+        
+    usd_target = data[key]["Exrate"]
+    
+    # 1 Target = (USDTWD / USDTarget) TWD
+    rate = usd_twd / usd_target
+    return {"rate": rate, "updated_at": utc_str}
