@@ -13,7 +13,11 @@ from pydantic import BaseModel
 from typing import Optional, List
 from bson import ObjectId
 
-load_dotenv()
+from pathlib import Path
+
+# 載入 .env 檔案 (使用明確路徑)
+env_path = Path(__file__).parent / '.env'
+load_dotenv(env_path)
 
 app = FastAPI()
 
@@ -68,12 +72,14 @@ class RegisterRequest(BaseModel):
     username: str
     password: str
     display_name: str
+    email: str = ""
     role: str = "user"
 
 class UserCreate(BaseModel):
     username: str
     password: str
     display_name: str
+    email: str = ""
     role: str = "user"
 
 class InviteCodeRequest(BaseModel):
@@ -81,6 +87,60 @@ class InviteCodeRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     new_password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetWithTokenRequest(BaseModel):
+    token: str
+    new_password: str
+
+# Email 發送功能
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import secrets
+
+def send_reset_email(to_email: str, reset_token: str):
+    smtp_email = os.getenv("SMTP_EMAIL")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    
+    reset_link = f"{frontend_url}?reset_token={reset_token}"
+    
+    msg = MIMEMultipart()
+    msg['From'] = smtp_email
+    msg['To'] = to_email
+    msg['Subject'] = "🔐 PyMoney 密碼重設"
+    
+    body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>🔐 密碼重設請求</h2>
+        <p>您好，我們收到了您的密碼重設請求。</p>
+        <p>請點擊下方按鈕重設您的密碼：</p>
+        <a href="{reset_link}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; margin: 20px 0;">重設密碼</a>
+        <p>或複製以下連結到瀏覽器：</p>
+        <p style="color: #666;">{reset_link}</p>
+        <p style="color: #999; font-size: 12px;">此連結將在 30 分鐘後失效。如果您沒有請求重設密碼，請忽略此郵件。</p>
+    </body>
+    </html>
+    """
+    
+    msg.attach(MIMEText(body, 'html'))
+    
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_email, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Email 發送失敗: {e}")
+        return False
 
 class Category(BaseModel):
     name: str
@@ -141,14 +201,65 @@ def self_register(request: RegisterRequest):
         "username": request.username,
         "password": hash_password(request.password),
         "display_name": request.display_name,
+        "email": request.email,
         "role": request.role if request.role in ["user", "admin"] else "user",
         "family_id": None,
         "invite_code": None,
         "invite_expires": None,
+        "reset_token": None,
+        "reset_expires": None,
         "created_at": datetime.now().isoformat()
     }
     result = users_collection.insert_one(new_user)
     return {"message": "註冊成功", "id": str(result.inserted_id)}
+
+# [Auth] 忘記密碼 - 發送重設郵件
+@app.post("/api/auth/forgot-password")
+def forgot_password(request: ForgotPasswordRequest):
+    user = users_collection.find_one({"email": request.email})
+    if not user:
+        # 為了安全，即使找不到也回傳成功
+        return {"message": "如果此 Email 已註冊，您將收到重設郵件"}
+    
+    # 產生重設 token
+    reset_token = secrets.token_urlsafe(32)
+    expires = datetime.now() + timedelta(minutes=30)
+    
+    users_collection.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"reset_token": reset_token, "reset_expires": expires.isoformat()}}
+    )
+    
+    # 發送郵件
+    if send_reset_email(request.email, reset_token):
+        return {"message": "重設郵件已發送，請檢查您的信箱"}
+    else:
+        raise HTTPException(status_code=500, detail="郵件發送失敗，請稍後再試")
+
+# [Auth] 使用 token 重設密碼
+@app.post("/api/auth/reset-password")
+def reset_password_with_token(request: ResetWithTokenRequest):
+    user = users_collection.find_one({"reset_token": request.token})
+    if not user:
+        raise HTTPException(status_code=400, detail="無效的重設連結")
+    
+    # 檢查是否過期
+    if user.get("reset_expires"):
+        expires = datetime.fromisoformat(user["reset_expires"])
+        if datetime.now() > expires:
+            raise HTTPException(status_code=400, detail="重設連結已過期，請重新申請")
+    
+    # 更新密碼並清除 token
+    users_collection.update_one(
+        {"_id": user["_id"]},
+        {"$set": {
+            "password": hash_password(request.new_password),
+            "reset_token": None,
+            "reset_expires": None
+        }}
+    )
+    
+    return {"message": "密碼已重設成功，請使用新密碼登入"}
 
 # [Invite] 產生邀請碼
 @app.post("/api/invite/generate")

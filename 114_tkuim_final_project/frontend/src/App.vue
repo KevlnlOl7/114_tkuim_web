@@ -5,11 +5,21 @@ import Chart from './components/Chart.vue'
 import BarChart from './components/BarChart.vue'
 import LoginPage from './components/LoginPage.vue'
 import RegisterPage from './components/RegisterPage.vue'
+import UserManager from './components/UserManager.vue'
 
 // --- 頁面狀態 ---
 const currentPage = ref('login') // 'login', 'register', 'main'
 const isLoggedIn = ref(false)
 const currentUser = ref(null)
+const showUserManager = ref(false)
+
+// 重設密碼 Modal (從 Email 連結)
+const showResetPasswordModal = ref(false)
+const pendingResetToken = ref('')
+const newPassword = ref('')
+const confirmNewPassword = ref('')
+const resetMessage = ref('')
+const resetLoading = ref(false)
 
 const checkLoginStatus = () => {
   isLoggedIn.value = localStorage.getItem('isLoggedIn') === 'true'
@@ -333,6 +343,17 @@ const budgetPercent = computed(() => {
 })
 
 onMounted(() => {
+  // 檢查是否有重設密碼的 token
+  const urlParams = new URLSearchParams(window.location.search)
+  const resetToken = urlParams.get('reset_token')
+  if (resetToken) {
+    showResetPasswordModal.value = true
+    pendingResetToken.value = resetToken
+    // 清除 URL 參數
+    window.history.replaceState({}, '', window.location.pathname)
+    return
+  }
+  
   checkLoginStatus()
   if (isLoggedIn.value) {
     fetchData()
@@ -342,6 +363,47 @@ onMounted(() => {
     }
   }
 })
+
+// 處理從 Email 連結重設密碼
+const handleResetPassword = async () => {
+  resetMessage.value = ''
+  
+  if (!newPassword.value || !confirmNewPassword.value) {
+    resetMessage.value = '請填寫所有欄位'
+    return
+  }
+  
+  if (newPassword.value !== confirmNewPassword.value) {
+    resetMessage.value = '兩次密碼不一致'
+    return
+  }
+  
+  if (newPassword.value.length < 4) {
+    resetMessage.value = '密碼至少需要 4 個字元'
+    return
+  }
+  
+  resetLoading.value = true
+  
+  try {
+    const res = await axios.post('http://127.0.0.1:8000/api/auth/reset-password', {
+      token: pendingResetToken.value,
+      new_password: newPassword.value
+    })
+    resetMessage.value = '✅ ' + res.data.message
+    setTimeout(() => {
+      showResetPasswordModal.value = false
+      newPassword.value = ''
+      confirmNewPassword.value = ''
+      pendingResetToken.value = ''
+      resetMessage.value = ''
+    }, 2000)
+  } catch (err) {
+    resetMessage.value = '❌ ' + (err.response?.data?.detail || '重設失敗')
+  } finally {
+    resetLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -358,8 +420,39 @@ onMounted(() => {
     @go-to-login="currentPage = 'login'"
   />
   
+  <!-- 重設密碼 Modal (從 Email 連結打開) -->
+  <div v-if="showResetPasswordModal" class="reset-modal-overlay">
+    <div class="reset-modal-card">
+      <h2>🔐 重設密碼</h2>
+      <p class="reset-hint">請輸入您的新密碼</p>
+      
+      <input 
+        v-model="newPassword" 
+        type="password" 
+        placeholder="新密碼" 
+        class="reset-input"
+        :disabled="resetLoading"
+      />
+      <input 
+        v-model="confirmNewPassword" 
+        type="password" 
+        placeholder="確認新密碼" 
+        class="reset-input"
+        :disabled="resetLoading"
+      />
+      
+      <p v-if="resetMessage" :class="resetMessage.includes('✅') ? 'success-msg' : 'error-msg'">
+        {{ resetMessage }}
+      </p>
+      
+      <button @click="handleResetPassword" class="btn-reset-confirm" :disabled="resetLoading">
+        {{ resetLoading ? '處理中...' : '確認重設' }}
+      </button>
+    </div>
+  </div>
+  
   <!-- 主頁面 -->
-  <div v-else class="app-background">
+  <div v-else-if="currentPage === 'main'" class="app-background">
     <div class="container">
       <div class="app-header">
         <div class="header-left">
@@ -381,6 +474,10 @@ onMounted(() => {
           <!-- 管理員：輸入邀請碼 -->
           <button v-if="currentUser?.role === 'admin'" @click="showJoinModal = true" class="btn-join">
             ➕ 加入成員
+          </button>
+          <!-- 管理員：使用者管理 -->
+          <button v-if="currentUser?.role === 'admin'" @click="showUserManager = true" class="btn-manage">
+            👥 管理
           </button>
           <button @click="handleLogout" class="btn-logout">🚪 登出</button>
         </div>
@@ -408,6 +505,11 @@ onMounted(() => {
             <button @click="showJoinModal = false" class="btn-cancel">取消</button>
           </div>
         </div>
+      </div>
+
+      <!-- 使用者管理 Modal -->
+      <div v-if="showUserManager" class="modal-overlay" @click.self="showUserManager = false">
+        <UserManager @close="showUserManager = false" />
       </div>
 
       <!-- 一般使用者：家庭狀態卡片 -->
@@ -629,6 +731,8 @@ body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
 .btn-invite:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4); }
 .btn-join { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.3s; }
 .btn-join:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+.btn-manage { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.3s; }
+.btn-manage:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4); }
 
 /* Modal */
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
@@ -801,4 +905,15 @@ input:focus, select:focus { border-color: #3498db; outline: none; }
 :global(.dark) .tx-meta { color: #718096; }
 :global(.dark) .btn-icon { border-color: #4a5568; color: #a0a0a0; }
 :global(.dark) .btn-theme { background: #2d3748; }
+
+/* Reset Password Modal */
+.reset-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+.reset-modal-card { background: white; border-radius: 20px; padding: 40px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.reset-modal-card h2 { margin: 0 0 10px 0; color: #2d3436; font-size: 1.5rem; }
+.reset-hint { color: #636e72; margin-bottom: 25px; font-size: 0.95rem; }
+.reset-input { width: 100%; padding: 14px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 1rem; margin-bottom: 12px; transition: border-color 0.3s; }
+.reset-input:focus { border-color: #667eea; outline: none; }
+.btn-reset-confirm { width: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 14px; border-radius: 12px; cursor: pointer; font-size: 1rem; font-weight: bold; margin-top: 10px; transition: all 0.3s; }
+.btn-reset-confirm:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+.btn-reset-confirm:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 </style>

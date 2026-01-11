@@ -6,6 +6,7 @@ const username = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const displayName = ref('')
+const email = ref('')
 const role = ref('user')
 const error = ref('')
 const success = ref('')
@@ -17,7 +18,7 @@ const handleRegister = async () => {
   error.value = ''
   success.value = ''
   
-  if (!username.value || !password.value || !displayName.value) {
+  if (!username.value || !password.value || !displayName.value || !email.value) {
     error.value = '請填寫所有欄位'
     return
   }
@@ -39,6 +40,7 @@ const handleRegister = async () => {
       username: username.value,
       password: password.value,
       display_name: displayName.value,
+      email: email.value,
       role: role.value
     })
     
@@ -68,6 +70,16 @@ const handleRegister = async () => {
             v-model="displayName" 
             type="text" 
             placeholder="顯示名稱（如：小明）" 
+            :disabled="isLoading"
+          />
+        </div>
+        
+        <div class="input-wrapper">
+          <span class="input-icon">📧</span>
+          <input 
+            v-model="email" 
+            type="email" 
+            placeholder="Email（用於重設密碼）" 
             :disabled="isLoading"
           />
         </div>

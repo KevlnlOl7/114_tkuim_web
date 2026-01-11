@@ -7,7 +7,13 @@ const password = ref('')
 const error = ref('')
 const isLoading = ref(false)
 
-const emit = defineEmits(['login-success'])
+// 忘記密碼
+const showForgotModal = ref(false)
+const forgotEmail = ref('')
+const forgotMessage = ref('')
+const forgotLoading = ref(false)
+
+const emit = defineEmits(['login-success', 'go-to-register'])
 
 const handleLogin = async () => {
   if (!username.value || !password.value) {
@@ -38,6 +44,32 @@ const handleLogin = async () => {
     }
   } finally {
     isLoading.value = false
+  }
+}
+
+const handleForgotPassword = async () => {
+  if (!forgotEmail.value) {
+    forgotMessage.value = '請輸入 Email'
+    return
+  }
+  
+  forgotLoading.value = true
+  forgotMessage.value = ''
+  
+  try {
+    const res = await axios.post('http://127.0.0.1:8000/api/auth/forgot-password', {
+      email: forgotEmail.value
+    })
+    forgotMessage.value = '✅ ' + res.data.message
+    setTimeout(() => {
+      showForgotModal.value = false
+      forgotEmail.value = ''
+      forgotMessage.value = ''
+    }, 3000)
+  } catch (err) {
+    forgotMessage.value = '❌ ' + (err.response?.data?.detail || '發送失敗')
+  } finally {
+    forgotLoading.value = false
   }
 }
 
@@ -88,6 +120,10 @@ const handleKeyup = (e) => {
           <span v-if="isLoading" class="spinner"></span>
           <span v-else>登入系統</span>
         </button>
+        
+        <button @click="showForgotModal = true" class="btn-forgot">
+          🔑 忘記密碼？
+        </button>
       </div>
       
       <div class="login-footer">
@@ -95,6 +131,30 @@ const handleKeyup = (e) => {
         <button @click="$emit('go-to-register')" class="btn-register-link">
           還沒有帳號？立即註冊 →
         </button>
+      </div>
+    </div>
+    
+    <!-- 忘記密碼 Modal -->
+    <div v-if="showForgotModal" class="modal-overlay" @click.self="showForgotModal = false">
+      <div class="modal-card">
+        <h3>🔐 忘記密碼</h3>
+        <p class="modal-hint">請輸入您註冊時使用的 Email，我們將發送重設連結給您</p>
+        <input 
+          v-model="forgotEmail" 
+          type="email" 
+          placeholder="輸入 Email" 
+          class="modal-input"
+          :disabled="forgotLoading"
+        />
+        <p v-if="forgotMessage" :class="forgotMessage.includes('✅') ? 'success-msg' : 'error-msg'">
+          {{ forgotMessage }}
+        </p>
+        <div class="modal-actions">
+          <button @click="handleForgotPassword" class="btn-confirm" :disabled="forgotLoading">
+            {{ forgotLoading ? '發送中...' : '發送重設郵件' }}
+          </button>
+          <button @click="showForgotModal = false" class="btn-cancel">取消</button>
+        </div>
       </div>
     </div>
   </div>
@@ -291,4 +351,85 @@ h1 {
     font-size: 1.5rem;
   }
 }
+
+/* Forgot Password Button */
+.btn-forgot {
+  background: transparent;
+  border: none;
+  color: #667eea;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.3s;
+}
+.btn-forgot:hover { color: #764ba2; text-decoration: underline; }
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-card {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-card h3 { margin: 0 0 10px 0; color: #2d3436; font-size: 1.3rem; }
+.modal-hint { color: #636e72; margin-bottom: 20px; font-size: 0.9rem; }
+
+.modal-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+.modal-input:focus { border-color: #667eea; outline: none; }
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+.btn-confirm {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 10px 25px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn-cancel {
+  background: #e0e0e0;
+  color: #333;
+  border: none;
+  padding: 10px 25px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.success-msg { color: #00b894; font-size: 0.9rem; }
+.error-msg { color: #d63031; font-size: 0.9rem; }
 </style>
