@@ -1,22 +1,38 @@
 <script setup>
 import { computed } from 'vue'
-import { Pie } from 'vue-chartjs' // 引入圓餅圖
+import { Pie } from 'vue-chartjs'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
 
-// 註冊 Chart.js 的元件
 ChartJS.register(ArcElement, Tooltip, Legend)
 
-// 接收父層傳來的 stats 資料
 const props = defineProps(['stats'])
 
-// 把資料轉成 Chart.js 看得懂的格式
+// 類別對應的顏色（確保足夠多的顏色）
+const categoryColors = {
+  'Food': '#E74C3C',
+  'Transport': '#3498DB',
+  'Entertainment': '#9B59B6',
+  'Rent': '#F1C40F',
+  'Salary': '#2ECC71',
+  'Other': '#95A5A6',
+  // 備用顏色
+  'default': ['#1ABC9C', '#E67E22', '#34495E', '#16A085', '#27AE60', '#2980B9', '#8E44AD', '#C0392B']
+}
+
 const chartData = computed(() => {
+  const labels = Object.keys(props.stats)
+  const colors = labels.map((label, index) => 
+    categoryColors[label] || categoryColors.default[index % categoryColors.default.length]
+  )
+  
   return {
-    labels: Object.keys(props.stats), // 例如 ['Food', 'Transport']
+    labels,
     datasets: [
       {
-        backgroundColor: ['#E74C3C', '#F1C40F', '#3498DB', '#9B59B6'], // 顏色
-        data: Object.values(props.stats) // 例如 [500, 1200]
+        backgroundColor: colors,
+        data: Object.values(props.stats),
+        borderWidth: 2,
+        borderColor: '#fff'
       }
     ]
   }
@@ -24,25 +40,73 @@ const chartData = computed(() => {
 
 const chartOptions = {
   responsive: true,
-  maintainAspectRatio: false
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'bottom',
+      labels: {
+        padding: 15,
+        usePointStyle: true,
+        font: { size: 12 }
+      }
+    },
+    tooltip: {
+      callbacks: {
+        label: function(context) {
+          const value = context.raw
+          const total = context.dataset.data.reduce((a, b) => a + b, 0)
+          const percentage = ((value / total) * 100).toFixed(1)
+          return `$${value} (${percentage}%)`
+        }
+      }
+    }
+  }
 }
 </script>
 
 <template>
   <div class="chart-container">
-    <h3>支出類別分析</h3>
-    <Pie v-if="Object.keys(stats).length > 0" :data="chartData" :options="chartOptions" />
-    <p v-else>還沒有支出資料喔！</p>
+    <h3>📊 支出類別分析</h3>
+    <div v-if="Object.keys(stats).length > 0" class="chart-wrapper">
+      <Pie :data="chartData" :options="chartOptions" />
+    </div>
+    <p v-else class="empty-chart">還沒有支出資料喔！</p>
   </div>
 </template>
 
 <style scoped>
 .chart-container {
-  height: 300px; /* 圖表高度 */
   background: white;
   padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+  border-radius: 12px;
   text-align: center;
+}
+
+.chart-container h3 {
+  margin: 0 0 15px 0;
+  color: #2d3436;
+  font-size: 1.1rem;
+}
+
+.chart-wrapper {
+  height: 350px;
+  position: relative;
+  width: 100%;
+}
+
+.empty-chart {
+  color: #95a5a6;
+  padding: 40px 0;
+}
+
+/* Dark Mode */
+:global(.dark) .chart-container {
+  background: #16213e;
+}
+:global(.dark) .chart-container h3 {
+  color: #e0e0e0;
+}
+:global(.dark) .empty-chart {
+  color: #636e72;
 }
 </style>

@@ -479,7 +479,10 @@ def get_transactions(
     if user_id:
         query["user_id"] = user_id
     if keyword:
-        query["title"] = {"$regex": keyword, "$options": "i"}
+        query["$or"] = [
+            {"title": {"$regex": keyword, "$options": "i"}},
+            {"note": {"$regex": keyword, "$options": "i"}}
+        ]
     if start_date and end_date:
         query["date"] = {"$gte": start_date, "$lte": end_date}
     elif start_date:
@@ -513,9 +516,17 @@ def delete_transaction(id: str):
 
 # [Dashboard] 圓餅圖
 @app.get("/api/dashboard/stats")
-def get_category_stats():
+def get_category_stats(start_date: Optional[str] = None, end_date: Optional[str] = None):
+    match_stage = {"type": "expense"}
+    if start_date and end_date:
+        match_stage["date"] = {"$gte": start_date, "$lte": end_date}
+    elif start_date:
+        match_stage["date"] = {"$gte": start_date}
+    elif end_date:
+        match_stage["date"] = {"$lte": end_date}
+
     pipeline = [
-        {"$match": {"type": "expense"}},
+        {"$match": match_stage},
         {"$group": {"_id": "$category", "total": {"$sum": "$amount"}}}
     ]
     result = list(collection.aggregate(pipeline))

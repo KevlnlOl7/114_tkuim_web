@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import axios from 'axios'
 import Chart from './components/Chart.vue'
 import BarChart from './components/BarChart.vue'
+import CalendarView from './components/CalendarView.vue'
 import LoginPage from './components/LoginPage.vue'
 import RegisterPage from './components/RegisterPage.vue'
 import UserManager from './components/UserManager.vue'
@@ -12,6 +13,7 @@ const currentPage = ref('login') // 'login', 'register', 'main'
 const isLoggedIn = ref(false)
 const currentUser = ref(null)
 const showUserManager = ref(false)
+const showCalendar = ref(false)
 
 // 重設密碼 Modal (從 Email 連結)
 const showResetPasswordModal = ref(false)
@@ -70,6 +72,7 @@ const transactions = ref([])
 const stats = ref({})
 const trendData = ref({})
 const budgetLimit = ref(0)
+const isLoading = ref(false)
 
 
 // 搜尋與篩選
@@ -92,7 +95,8 @@ const fileInput = ref(null)
 const form = ref({
   title: '', amount: '', category: 'Food',
   date: new Date().toISOString().split('T')[0],
-  type: 'expense', payment_method: 'Cash'
+  type: 'expense', payment_method: 'Cash',
+  note: ''
 })
 
 const accountBalances = ref([]) // 帳戶餘額
@@ -217,6 +221,7 @@ const removeMember = async (memberId, memberName) => {
 
 // --- API ---
 const fetchData = async () => {
+  isLoading.value = true
   try {
     let url = `http://127.0.0.1:8000/api/transactions?keyword=${keyword.value}`
     if (startDate.value) url += `&start_date=${startDate.value}`
@@ -227,7 +232,13 @@ const fetchData = async () => {
     const listRes = await axios.get(url)
     transactions.value = listRes.data 
 
-    const statsRes = await axios.get('http://127.0.0.1:8000/api/dashboard/stats')
+    let statsUrl = 'http://127.0.0.1:8000/api/dashboard/stats'
+    if (startDate.value || endDate.value) {
+      statsUrl += '?'
+      if (startDate.value) statsUrl += `start_date=${startDate.value}&`
+      if (endDate.value) statsUrl += `end_date=${endDate.value}`
+    }
+    const statsRes = await axios.get(statsUrl)
     stats.value = statsRes.data
     const trendRes = await axios.get('http://127.0.0.1:8000/api/dashboard/trend')
     trendData.value = trendRes.data
@@ -236,7 +247,11 @@ const fetchData = async () => {
     budgetLimit.value = budgetRes.data.limit
     const accountRes = await axios.get('http://127.0.0.1:8000/api/dashboard/accounts')
     accountBalances.value = accountRes.data
-  } catch (error) { console.error(error) }
+  } catch (error) { 
+    console.error(error) 
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const handleSubmit = async () => {
@@ -273,6 +288,26 @@ const toggleBudgetEdit = () => {
   showBudgetInput.value = !showBudgetInput.value
 }
 
+const duplicateTransaction = (item) => {
+  form.value = {
+    ...item,
+    id: null, // Clear ID to ensure it's a new entry
+    date: new Date().toISOString().split('T')[0] // Default to today
+  }
+  isEditing.value = false // Ensure we are in "Add" mode
+  editId.value = null
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+
+
+const handleDateSelect = (date) => {
+  startDate.value = date
+  endDate.value = date
+  showCalendar.value = false
+  fetchData() // Refresh list
+}
+
 const startEdit = (item) => {
   isEditing.value = true
   editId.value = item.id
@@ -284,8 +319,19 @@ const resetForm = () => {
   form.value = {
     title: '', amount: '', category: 'Food',
     date: new Date().toISOString().split('T')[0],
-    type: 'expense', payment_method: 'Cash'
+    type: 'expense', payment_method: 'Cash',
+    note: ''
   }
+}
+
+const setDate = (offset) => {
+  const d = new Date()
+  d.setDate(d.getDate() + offset)
+  // Fix timezone issue: using local time string construction
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  form.value.date = `${year}-${month}-${day}`
 }
 
 // 匯出
@@ -453,6 +499,12 @@ const handleResetPassword = async () => {
   
   <!-- 主頁面 -->
   <div v-else-if="currentPage === 'main'" class="app-background">
+    <!-- Loading Overlay -->
+    <div v-if="isLoading" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <span class="loading-text">載入中...</span>
+    </div>
+    
     <div class="container">
       <div class="app-header">
         <div class="header-left">
@@ -618,7 +670,14 @@ const handleResetPassword = async () => {
               </select>
             </div>
             <div class="input-group">
-              <label>日期</label>
+              <div class="date-label-row">
+                <label>日期</label>
+                <div class="date-shortcuts">
+                  <span @click="setDate(-2)" class="date-chip">前天</span>
+                  <span @click="setDate(-1)" class="date-chip">昨天</span>
+                  <span @click="setDate(0)" class="date-chip">今天</span>
+                </div>
+              </div>
               <input v-model="form.date" type="date" required />
             </div>
             <div class="input-group">
@@ -654,6 +713,12 @@ const handleResetPassword = async () => {
               </select>
             </div>
           </div>
+          <div class="form-row">
+            <div class="input-group flex-full">
+              <label>📝 備註 (選填)</label>
+              <textarea v-model="form.note" placeholder="額外說明..." rows="2" class="note-textarea"></textarea>
+            </div>
+          </div>
           <button @click="handleSubmit" class="btn-submit" :class="{ 'btn-update': isEditing }">
             {{ isEditing ? '完成修改' : '確認新增' }}
           </button>
@@ -662,6 +727,7 @@ const handleResetPassword = async () => {
 
       <div class="list-section">
         <div class="filter-bar">
+          <button @click="showCalendar = !showCalendar" class="btn-icon calendar-btn" :class="{ active: showCalendar }">📅</button>
           <div class="search-box">
             <input v-model="keyword" type="text" placeholder="🔍 關鍵字..." />
           </div>
@@ -671,6 +737,9 @@ const handleResetPassword = async () => {
             <input v-model="endDate" type="date" />
           </div>
         </div>
+        
+        <CalendarView v-if="showCalendar" :trendData="trendData" @date-selected="handleDateSelect" />
+
         <div v-if="transactions.length === 0" class="empty-state">無資料...</div>
         <div v-else class="transaction-list">
           <div v-for="item in transactions" :key="item.id" class="list-item">
@@ -687,6 +756,7 @@ const handleResetPassword = async () => {
                   </span>
                   <span class="tag method">{{ item.payment_method }}</span>
                 </div>
+                <div v-if="item.note" class="item-note">📝 {{ item.note }}</div>
               </div>
             </div>
             <div class="item-right">
@@ -694,6 +764,7 @@ const handleResetPassword = async () => {
                 {{ item.type === 'expense' ? '-' : (item.type === 'income' ? '+' : '') }} ${{ item.amount }}
               </span>
               <div class="actions">
+                <button @click="duplicateTransaction(item)" class="btn-icon copy" title="複製">📋</button>
                 <button @click="startEdit(item)" class="btn-icon">✎</button> 
                 <button @click="removeTransaction(item.id)" class="btn-icon del">🗑️</button>
               </div>
@@ -713,6 +784,36 @@ body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
 /* Theme Toggle Button */
 .btn-theme { background: #e0e0e0; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; transition: all 0.3s; display: flex; align-items: center; justify-content: center; }
 .btn-theme:hover { transform: scale(1.1); }
+
+/* Loading Overlay */
+.loading-overlay { 
+  position: fixed; 
+  top: 0; left: 0; right: 0; bottom: 0; 
+  background: rgba(255,255,255,0.85); 
+  display: flex; 
+  flex-direction: column;
+  align-items: center; 
+  justify-content: center; 
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.loading-text {
+  margin-top: 15px;
+  color: #667eea;
+  font-size: 1rem;
+  font-weight: 500;
+}
 
 /* Light Mode (Default) */
 .app-background { min-height: 100vh; background-color: #f4f5f7; padding: 20px; transition: background-color 0.3s; }
@@ -842,7 +943,9 @@ input:focus, select:focus { border-color: #3498db; outline: none; }
 .btn-sm { background: #ddd; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; }
 
 /* List */
-.filter-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+.filter-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; }
+.calendar-btn { background: white; border: 2px solid #ddd; width: 40px; height: 40px; border-radius: 8px; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+.calendar-btn.active { background: #667eea; color: white; border-color: #667eea; }
 .search-box { flex: 1; min-width: 200px; }
 .date-range { display: flex; align-items: center; gap: 5px; background: white; padding: 5px; border-radius: 6px; border: 2px solid #ddd; }
 .date-range input { border: none; padding: 5px; width: 130px; font-size: 0.9rem; }
@@ -863,7 +966,30 @@ input:focus, select:focus { border-color: #3498db; outline: none; }
 .actions { display: flex; gap: 5px; }
 .btn-icon { background: transparent; border: 1px solid #ddd; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .btn-icon.del { color: red; border-color: #ffcccc; }
+.btn-icon.copy { color: #3498db; border-color: #d6eaf8; }
 
+/* Note Field */
+.note-textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; resize: vertical; min-height: 50px; }
+.note-textarea:focus { border-color: #667eea; outline: none; }
+.item-note { font-size: 0.8rem; color: #636e72; margin-top: 5px; font-style: italic; }
+
+/* Date Shortcuts */
+.date-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.date-shortcuts { display: flex; gap: 5px; }
+.date-chip { 
+  font-size: 0.75rem; 
+  padding: 2px 8px; 
+  background: #e0e0e0; 
+  border-radius: 12px; 
+  cursor: pointer; 
+  color: #555; 
+  transition: all 0.2s; 
+}
+.date-chip:hover { background: #b2bec3; color: white; }
+:global(.dark) .date-chip { background: #2d3748; color: #a0a0a0; }
+:global(.dark) .date-chip:hover { background: #4a5568; color: white; }
+
+/* Responsive adjustments */
 @media (max-width: 600px) {
   .dashboard-grid { grid-template-columns: 1fr; }
   .full-width-card { grid-column: span 1; }
