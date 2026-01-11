@@ -5,7 +5,7 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
-const props = defineProps(['stats', 'categories'])
+const props = defineProps(['stats', 'categories', 'emptyText'])
 
 const defaultColors = ['#1ABC9C', '#E67E22', '#34495E', '#16A085', '#27AE60', '#2980B9', '#8E44AD', '#C0392B']
 
@@ -62,11 +62,10 @@ const chartOptions = {
 
 <template>
   <div class="chart-container">
-    <h3>📊 支出類別分析</h3>
     <div v-if="Object.keys(stats).length > 0" class="chart-wrapper">
       <Pie :data="chartData" :options="chartOptions" />
     </div>
-    <p v-else class="empty-chart">還沒有支出資料喔！</p>
+    <p v-else class="empty-chart">{{ emptyText || 'No Data' }}</p>
   </div>
 </template>
 

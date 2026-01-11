@@ -9,7 +9,37 @@ import LoginPage from './components/LoginPage.vue'
 import RegisterPage from './components/RegisterPage.vue'
 import UserManager from './components/UserManager.vue'
 
-// --- 頁面狀態 ---
+// --- Locals ---
+const currentMonthLabel = computed(() => {
+  return new Date().toLocaleString(currentLocale.value, { month: 'long' })
+})
+
+const t_category = (catName) => {
+  if (!catName) return ''
+  const key = catName.toLowerCase()
+  const map = messages[currentLocale.value]
+  return map[key] || catName
+}
+
+const defaultCurrency = ref(localStorage.getItem('default_currency') || 'TWD')
+const setDefaultCurrency = () => {
+    // Save current selection as default
+    defaultCurrency.value = form.value.currency
+    localStorage.setItem('default_currency', form.value.currency)
+    alert(t('default_set_hint').replace('{currency}', form.value.currency))
+}
+
+onMounted(() => {
+  checkLoginStatus()
+  if (isLoggedIn.value) {
+    fetchData()
+    fetchCategories()
+  }
+  // Load default currency
+  if (defaultCurrency.value) {
+      form.value.currency = defaultCurrency.value
+  }
+})
 const currentPage = ref('login') // 'login', 'register', 'main'
 const isLoggedIn = ref(false)
 const currentUser = ref(null)
@@ -106,24 +136,24 @@ const form = ref({
 
 
 
-const currencyOptions = [
-  { code: 'TWD', name: '新台幣' },
-  { code: 'USD', name: '美元' },
-  { code: 'JPY', name: '日圓' },
-  { code: 'EUR', name: '歐元' },
-  { code: 'KRW', name: '韓元' },
-  { code: 'CNY', name: '人民幣' },
-  { code: 'AUD', name: '澳幣' },
-  { code: 'CAD', name: '加幣' },
-  { code: 'GBP', name: '英鎊' },
-  { code: 'HKD', name: '港幣' },
-  { code: 'SGD', name: '新加坡幣' },
-  { code: 'THB', name: '泰銖' },
-  { code: 'VND', name: '越南盾' },
-  { code: 'PHP', name: '菲披索' },
-  { code: 'MYR', name: '馬幣' },
-  { code: 'IDR', name: '印尼盾' },
-]
+const currencyOptions = computed(() => [
+  { code: 'TWD', name: t('c_twd') },
+  { code: 'USD', name: t('c_usd') },
+  { code: 'JPY', name: t('c_jpy') },
+  { code: 'EUR', name: t('c_eur') },
+  { code: 'KRW', name: t('c_krw') },
+  { code: 'CNY', name: t('c_cny') },
+  { code: 'AUD', name: t('c_aud') },
+  { code: 'CAD', name: t('c_cad') },
+  { code: 'GBP', name: t('c_gbp') },
+  { code: 'HKD', name: t('c_hkd') },
+  { code: 'SGD', name: t('c_sgd') },
+  { code: 'THB', name: t('c_thb') },
+  { code: 'VND', name: t('c_vnd') },
+  { code: 'PHP', name: t('c_php') },
+  { code: 'MYR', name: t('c_myr') },
+  { code: 'IDR', name: t('c_idr') },
+])
 
 const rateUpdatedAt = ref('')
 
@@ -136,12 +166,12 @@ watch(() => form.value.currency, async (newVal) => {
   }
   try {
     const res = await axios.get(`http://127.0.0.1:8000/api/rates/${newVal}`)
-    form.value.exchange_rate = res.data.rate
+    form.value.exchange_rate = Number(res.data.rate.toFixed(6))
     // Convert UTC to Local Time (Force Taipei)
     const utc = res.data.updated_at
     if (utc) {
       const d = new Date(utc + (utc.includes('UTC') ? '' : ' UTC'))
-      rateUpdatedAt.value = d.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false }) + ' (台北時間)'
+      rateUpdatedAt.value = d.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false }) + ' (' + t('taipei_time') + ')'
     } else {
       rateUpdatedAt.value = ''
     }
@@ -172,7 +202,24 @@ const messages = {
      rate: '匯率', to_twd: '折合台幣', updated_at: '更新',
      submit: '確認新增', update: '完成修改', manage: '管理',
      expense: '支出', income: '收入', transfer: '轉帳',
-     search: '關鍵字', empty: '無資料'
+     search: '關鍵字', empty: '無資料',
+     budget_title: '本月預算', net_assets: '目前淨資產',
+     expense_analysis: '支出類別分析', trend_chart: '收支趨勢圖',
+     add_transaction: '新增一筆', keyword_search: '🔍 關鍵字...',
+     save: '儲存', settings: '設定', spend: '已花費',
+     budget: '預算', remaining: '還有', over: '已經超支了！請節制一點！',
+     import_data: '📥 匯入資料', export_excel: '📤 匯出 Excel',
+     day_before_yesterday: '前天', yesterday: '昨天', today: '今天',
+     cash: '現金', credit_card: '信用卡', bank: '銀行帳戶', linepay: 'LinePay',
+     to_date: '至', default_currency: '設為預設',
+     food: '飲食', transport: '交通', entertainment: '娛樂', shopping: '購物',
+     others: '其他', salary: '薪水', investment: '投資',
+     default_set_hint: '預設幣別已設定為 {currency}',
+     c_twd: '新台幣', c_usd: '美元', c_jpy: '日圓', c_eur: '歐元', c_krw: '韓元', c_cny: '人民幣',
+     c_aud: '澳幣', c_cad: '加幣', c_gbp: '英鎊', c_hkd: '港幣', c_sgd: '新加坡幣', c_thb: '泰銖',
+     c_vnd: '越南盾', c_php: '菲披索', c_myr: '馬幣', c_idr: '印尼盾',
+     optional: '選填', select_option: '請選擇', no_chart_data: '還沒有支出資料喔！',
+     taipei_time: '台北時間'
   },
   'en-US': {
      item_desc: 'Title', amount: 'Amount', date: 'Date', category: 'Category',
@@ -181,9 +228,162 @@ const messages = {
      rate: 'Rate', to_twd: 'in TWD', updated_at: 'Updated',
      submit: 'Add', update: 'Update', manage: 'Manage',
      expense: 'Expense', income: 'Income', transfer: 'Transfer',
-     search: 'Search...', empty: 'No Data'
-  }
+     search: 'Search...', empty: 'No Data',
+     budget_title: 'Monthly Budget', net_assets: 'Net Assets',
+     expense_analysis: 'Expense Analysis', trend_chart: 'Trend Chart',
+     add_transaction: 'Add Transaction', keyword_search: '🔍 Search...',
+     save: 'Save', settings: 'Settings', spend: 'Spent',
+     budget: 'Budget', remaining: 'Remaining', over: 'Over Budget!',
+     import_data: '📥 Import Data', export_excel: '📤 Export Excel',
+     day_before_yesterday: 'Day Before Yest.', yesterday: 'Yesterday', today: 'Today',
+     cash: 'Cash', credit_card: 'Credit Card', bank: 'Bank', linepay: 'LinePay',
+     to_date: 'to', default_currency: 'Set Default',
+     food: 'Food', transport: 'Transport', entertainment: 'Entertainment', shopping: 'Shopping',
+     others: 'Others', salary: 'Salary', investment: 'Investment',
+     default_set_hint: 'Default currency set to {currency}',
+     c_twd: 'Taiwan Dollar', c_usd: 'US Dollar', c_jpy: 'J. Yen', c_eur: 'Euro', c_krw: 'Won', c_cny: 'Yuan',
+     c_aud: 'Aus Dollar', c_cad: 'Can Dollar', c_gbp: 'Pound', c_hkd: 'HK Dollar', c_sgd: 'SG Dollar', c_thb: 'Baht',
+     c_vnd: 'Dong', c_php: 'Peso', c_myr: 'Ringgit', c_idr: 'Rupiah',
+     optional: 'Optional', select_option: 'Select', no_chart_data: 'No expense data yet!',
+     taipei_time: 'Taipei Time'
+  },
+  'vi': {
+     item_desc: 'Tiêu đề', amount: 'Số tiền', date: 'Ngày', category: 'Danh mục',
+     note: 'Ghi chú', type: 'Loại', account: 'Tài khoản',
+     from_account: 'Từ TK', to_account: 'Đến TK',
+     rate: 'Tỷ giá', to_twd: 'Sang TWD', updated_at: 'Cập nhật',
+     submit: 'Thêm', update: 'Cập nhật', manage: 'Quản lý',
+     expense: 'Chi tiêu', income: 'Thu nhập', transfer: 'Chuyển khoản',
+     search: 'Tìm kiếm', empty: 'Không có dữ liệu',
+     budget_title: 'Ngân sách tháng', net_assets: 'Tài sản ròng',
+     expense_analysis: 'Phân tích chi tiêu', trend_chart: 'Xu hướng',
+     add_transaction: 'Thêm giao dịch', keyword_search: '🔍 Tìm kiếm...',
+     save: 'Lưu', settings: 'Cài đặt', spend: 'Đã chi',
+     budget: 'Ngân sách', remaining: 'Còn lại', over: 'Đã vượt quá!',
+     import_data: '📥 Nhập dữ liệu', export_excel: '📤 Xuất Excel',
+     day_before_yesterday: 'Hôm kia', yesterday: 'Hôm qua', today: 'Hôm nay',
+     cash: 'Tiền mặt', credit_card: 'Thẻ tín dụng', bank: 'Ngân hàng', linepay: 'LinePay',
+     to_date: 'đến', default_currency: 'Đặt mặc định',
+     food: 'Ăn uống', transport: 'Đi lại', entertainment: 'Giải trí', shopping: 'Mua sắm',
+     others: 'Khác', salary: 'Lương', investment: 'Đầu tư',
+     default_set_hint: 'Tiền tệ mặc định là {currency}',
+     c_twd: 'Đài tệ', c_usd: 'Đô la Mỹ', c_jpy: 'Yên Nhật', c_eur: 'Euro', c_krw: 'Won', c_cny: 'Nhân dân tệ',
+     c_aud: 'Đô Úc', c_cad: 'Đô Canada', c_gbp: 'Bảng Anh', c_hkd: 'Đô HK', c_sgd: 'Đô Sing', c_thb: 'Baht',
+     c_vnd: 'Đồng', c_php: 'Peso', c_myr: 'Ringgit', c_idr: 'Rupiah',
+     optional: 'Tùy chọn', select_option: 'Chọn', no_chart_data: 'Chưa có dữ liệu chi tiêu!',
+     taipei_time: 'Giờ Đài Bắc'
+  },
+  'id': {
+     item_desc: 'Judul', amount: 'Jumlah', date: 'Tanggal', category: 'Kategori',
+     note: 'Catatan', type: 'Jenis', account: 'Akun',
+     from_account: 'Dari Akun', to_account: 'Ke Akun',
+     rate: 'Kurs', to_twd: 'Ke TWD', updated_at: 'Diperbarui',
+     submit: 'Tambah', update: 'Ubah', manage: 'Kelola',
+     expense: 'Pengeluaran', income: 'Pemasukan', transfer: 'Transfer',
+     search: 'Cari', empty: 'Tidak ada data',
+     budget_title: 'Anggaran Bulanan', net_assets: 'Aset Bersih',
+     expense_analysis: 'Analisis Pengeluaran', trend_chart: 'Tren',
+     add_transaction: 'Tambah Transaksi', keyword_search: '🔍 Cari...',
+     save: 'Simpan', settings: 'Pengaturan', spend: 'Terpakai',
+     budget: 'Anggaran', remaining: 'Sisa', over: 'Melebihi Anggaran!',
+     import_data: '📥 Impor Data', export_excel: '📤 Ekspor Excel',
+     day_before_yesterday: 'Kemarin lusa', yesterday: 'Kemarin', today: 'Hari ini',
+     cash: 'Tunai', credit_card: 'Kartu Kredit', bank: 'Bank', linepay: 'LinePay',
+     to_date: 'sampai', default_currency: 'Set Default',
+     food: 'Makanan', transport: 'Transportasi', entertainment: 'Hiburan', shopping: 'Belanja',
+     others: 'Lainnya', salary: 'Gaji', investment: 'Investasi',
+     default_set_hint: 'Mata uang default {currency}',
+     c_twd: 'NB Taiwan', c_usd: 'Dolar AS', c_jpy: 'Yen', c_eur: 'Euro', c_krw: 'Won', c_cny: 'Yuan',
+     c_aud: 'Dolar Aus', c_cad: 'Dolar Can', c_gbp: 'Pound', c_hkd: 'Dolar HK', c_sgd: 'Dolar SG', c_thb: 'Baht',
+     c_vnd: 'Dong', c_php: 'Peso', c_myr: 'Ringgit', c_idr: 'Rupiah',
+     optional: 'Opsional', select_option: 'Pilih', no_chart_data: 'Belum ada data pengeluaran!',
+     taipei_time: '台北時間'
+  },
+  'ja': {
+     item_desc: '項目名', amount: '金額', date: '日付', category: 'カテゴリ',
+     note: 'メモ', type: '種類', account: '口座',
+     from_account: '出金口座', to_account: '入金口座',
+     rate: 'レート', to_twd: 'TWD換算', updated_at: '更新',
+     submit: '追加', update: '更新', manage: '管理',
+     expense: '支出', income: '収入', transfer: '振替',
+     search: '検索', empty: 'データなし',
+     budget_title: '今月の予算', net_assets: '純資産',
+     expense_analysis: '支出分析', trend_chart: '収支推移',
+     add_transaction: '取引を追加', keyword_search: '🔍 キーワード...',
+     save: '保存', settings: '設定', spend: '支出済',
+     budget: '予算', remaining: '残り', over: '予算超過です！',
+     import_data: '📥 インポート', export_excel: '📤 輸出 Excel',
+     day_before_yesterday: '一昨日', yesterday: '昨日', today: '今日',
+     cash: '現金', credit_card: 'クレカ', bank: '銀行', linepay: 'LinePay',
+     to_date: '〜', default_currency: 'デフォルトに設定',
+     food: '食事', transport: '交通', entertainment: '娯楽', shopping: '買い物',
+     others: 'その他', salary: '給料', investment: '投資',
+     default_set_hint: 'デフォルト通貨: {currency}',
+     c_twd: '台湾ドル', c_usd: '米ドル', c_jpy: '日本円', c_eur: 'ユーロ', c_krw: '韓国ウォン', c_cny: '人民元',
+     c_aud: '豪ドル', c_cad: '加ドル', c_gbp: 'ポンド', c_hkd: '香港ドル', c_sgd: 'SGドル', c_thb: 'バーツ',
+     c_vnd: 'ドン', c_php: 'ペソ', c_myr: 'リンギット', c_idr: 'ルピア',
+     optional: '任意', select_option: '選択してください', no_chart_data: '支出データはまだありません！',
+     taipei_time: '台北時間'
+  },
+  'ko': {
+     item_desc: '항목', amount: '금액', date: '날짜', category: '카테고리',
+     note: '메모', type: '유형', account: '계좌',
+     from_account: '출금 계좌', to_account: '입금 계좌',
+     rate: '환율', to_twd: 'TWD 환산', updated_at: '업데이트',
+     submit: '추가', update: '수정', manage: '관리',
+     expense: '지출', income: '수입', transfer: '이체',
+     search: '검색', empty: '데이터 없음',
+     budget_title: '이번 달 예산', net_assets: '순자산',
+     expense_analysis: '지출 분석', trend_chart: '수지 추이',
+     add_transaction: '거래 추가', keyword_search: '🔍 검색...',
+     save: '저장', settings: '설정', spend: '지출',
+     budget: '예산', remaining: '잔액', over: '예산 초과!',
+     import_data: '📥 데이터 가져오기', export_excel: '📤 엑셀 내보내기',
+     day_before_yesterday: '그저께', yesterday: '어제', today: '오늘',
+     cash: '현금', credit_card: '신용카드', bank: '은행', linepay: 'LinePay',
+     to_date: '~', default_currency: '기본값 설정',
+     food: '식비', transport: '교통', entertainment: '오락', shopping: '쇼핑',
+     others: '기타', salary: '급여', investment: '투자',
+     default_set_hint: '기본 통화: {currency}',
+     c_twd: '대만 달러', c_usd: '미국 달러', c_jpy: '엔화', c_eur: '유로', c_krw: '원화', c_cny: '위안화',
+     c_aud: '호주 달러', c_cad: '캐나다 달러', c_gbp: '파운드', c_hkd: '홍콩 달러', c_sgd: '싱가포르 달러', c_thb: '바트',
+     c_vnd: '동', c_php: '페소', c_myr: '링깃', c_idr: '루피아',
+     optional: '선택', select_option: '선택', no_chart_data: '지출 데이터가 없습니다!',
+     taipei_time: '타이베이 시간'
+  },
+  'tl': {
+     item_desc: 'Pamagat', amount: 'Halaga', date: 'Petsa', category: 'Kategorya',
+     note: 'Tala', type: 'Uri', account: 'Account',
+     from_account: 'Mula sa', to_account: 'Papunta sa',
+     rate: 'Rate', to_twd: 'sa TWD', updated_at: 'Na-update',
+     submit: 'Idagdag', update: 'I-update', manage: 'Pamahalaan',
+     expense: 'Gastos', income: 'Kita', transfer: 'Paglipat',
+     search: 'Paghahanap', empty: 'Walang Data',
+     budget_title: 'Buwanang Badyet', net_assets: 'Net Assets',
+     expense_analysis: 'Pagsusuri', trend_chart: 'Trend',
+     add_transaction: 'Magdagdag', keyword_search: '🔍 Hanapin...',
+     save: 'I-save', settings: 'Mga Setting', spend: 'Nagastos',
+     budget: 'Badyet', remaining: 'Natitira', over: 'Lampas sa Badyet!',
+     import_data: '📥 Mag-import', export_excel: '📤 I-export Excel',
+     day_before_yesterday: 'Noong makalawa', yesterday: 'Kahapon', today: 'Ngayon',
+     cash: 'Cash', credit_card: 'Credit Card', bank: 'Banko', linepay: 'LinePay',
+     to_date: 'sa', default_currency: 'Itakda ang Default',
+     food: 'Pagkain', transport: 'Transportasyon', entertainment: 'Libangan', shopping: 'Pamimili',
+     others: 'Iba pa', salary: 'Sahod', investment: 'Pamumuhunan',
+     default_set_hint: 'Default na pera: {currency}',
+     c_twd: 'Taiwan Dollar', c_usd: 'US Dollar', c_jpy: 'Yen', c_eur: 'Euro', c_krw: 'Won', c_cny: 'Yuan',
+     c_aud: 'Aus Dollar', c_cad: 'Can Dollar', c_gbp: 'Pound', c_hkd: 'HK Dollar', c_sgd: 'SG Dollar', c_thb: 'Baht',
+     c_vnd: 'Dong', c_php: 'Peso', c_myr: 'Ringgit', c_idr: 'Rupiah',
+     optional: 'Opsyonal', select_option: 'Piliin', no_chart_data: 'Wala pang datos ng gastusin!',
+     taipei_time: 'Taipei Oras'
+  },
 }
+const formatDateBadge = (dateStr) => {
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return ''
+  return date.toLocaleString(currentLocale.value, { month: 'short' })
+}
+
 const t = (key) => messages[currentLocale.value][key] || key
 
 // --- 邀請碼相關 ---
@@ -559,6 +759,12 @@ const handleResetPassword = async () => {
     resetLoading.value = false
   }
 }
+
+watch(currentLocale, (val) => {
+  localStorage.setItem('user_locale', val)
+  document.documentElement.lang = val
+}, { immediate: true })
+
 </script>
 
 <template>
@@ -624,9 +830,14 @@ const handleResetPassword = async () => {
           </span>
         </div>
         <div class="header-actions">
-          <select v-model="currentLocale" style="margin-right:8px; padding:4px; border-radius:4px;">
-            <option value="zh-TW">中文</option>
-            <option value="en-US">English</option>
+          <select v-model="currentLocale" class="lang-select">
+            <option value="zh-TW">🇹🇼 中文</option>
+            <option value="en-US">🇺🇸 English</option>
+            <option value="ja">🇯🇵 日本語</option>
+            <option value="ko">🇰🇷 한국어</option>
+            <option value="vi">🇻🇳 Tiếng Việt</option>
+            <option value="id">🇮🇩 Bahasa Ind</option>
+            <option value="tl">🇵🇭 Filipino</option>
           </select>
           <!-- 深色模式切換 -->
           <button @click="toggleTheme" class="btn-theme">
@@ -725,57 +936,59 @@ const handleResetPassword = async () => {
       <div class="dashboard-grid">
         <div class="card budget-card full-width-card">
           <div class="budget-header">
-            <h3>📅 本月預算 ({{ new Date().getMonth() + 1 }}月)</h3>
-            <button @click="toggleBudgetEdit" class="btn-sm">⚙️ 設定</button>
+            <h3>📅 {{ t('budget_title') }} ({{ currentMonthLabel }})</h3>
+            <button @click="toggleBudgetEdit" class="btn-sm">⚙️ {{ t('settings') }}</button>
           </div>
           <div v-if="showBudgetInput" class="budget-input-area">
-            <input v-model="newBudget" type="number" placeholder="輸入預算金額" />
-            <button @click="saveBudget" class="btn-confirm">儲存</button>
+            <input v-model="newBudget" type="number" :placeholder="t('budget')" />
+            <button @click="saveBudget" class="btn-confirm">{{ t('save') }}</button>
           </div>
           <div v-else class="budget-display">
             <div class="budget-info">
-              <span>已花費: <b>${{ monthlyExpense }}</b></span>
-              <span>預算: ${{ budgetLimit }}</span>
+              <span>{{ t('spend') }}: <b>${{ monthlyExpense }}</b></span>
+              <span>{{ t('budget') }}: ${{ budgetLimit }}</span>
             </div>
             <div class="progress-container">
               <div class="progress-bar" :style="{ width: budgetPercent + '%', backgroundColor: monthlyExpense > budgetLimit ? '#ff7675' : '#74b9ff' }"></div>
             </div>
-            <p v-if="monthlyExpense > budgetLimit" class="warning-text">⚠️ 已經超支了！請節制一點！</p>
-            <p v-else class="safe-text">✨ 還有 ${{ budgetLimit - monthlyExpense }} 可以花</p>
+            <p v-if="monthlyExpense > budgetLimit" class="warning-text">⚠️ {{ t('over') }}</p>
+            <p v-else class="safe-text">✨ {{ t('remaining') }} ${{ budgetLimit - monthlyExpense }}</p>
           </div>
         </div>
 
         <div class="card balance-card">
-          <h3>目前淨資產</h3>
+          <h3>{{ t('net_assets') }}</h3>
           <h2 :class="totalAmount >= 0 ? 'income-text' : 'expense-text'">${{ totalAmount }}</h2>
           
           <div class="button-group">
              <input type="file" ref="fileInput" @change="handleImport" accept=".xlsx,.xls,.csv" style="display: none" />
             
-            <button @click="triggerFileInput" class="btn-outline">📥 匯入資料</button>
-            <button @click="exportExcel" class="btn-outline">📤 匯出 Excel</button>
+            <button @click="triggerFileInput" class="btn-outline">{{ t('import_data') }}</button>
+            <button @click="exportExcel" class="btn-outline">{{ t('export_excel') }}</button>
           </div>
         </div>
 
         <div class="card chart-card">
-          <Chart :stats="stats" :categories="categories" />
+          <h3>{{ t('expense_analysis') }}</h3>
+          <Chart :stats="stats" :categories="categories" :emptyText="t('no_chart_data')" />
         </div>
         
         <div class="card bar-chart-card full-width-card">
-          <BarChart :trendData="trendData" />
+          <h3>{{ t('trend_chart') }}</h3>
+          <BarChart :trendData="trendData" :expenseLabel="t('expense')" :incomeLabel="t('income')" />
         </div>
       </div>
 
       <div class="card form-card" :class="{ 'edit-mode': isEditing }">
         <div class="form-header">
-          <h3>{{ isEditing ? '✏️ 修改紀錄' : '📝 新增一筆' }}</h3>
+          <h3>{{ isEditing ? '✏️ ' + t('update') : '📝 ' + t('add_transaction') }}</h3>
           <button v-if="isEditing" @click="cancelEdit" class="btn-sm">取消</button>
         </div>
         
         <div class="form-body">
           <div class="form-row">
             <div class="input-group">
-              <label>類型</label>
+              <label>{{ t('type') }}</label>
               <select v-model="form.type">
                 <option value="expense">{{ t('expense') }} 💸</option>
                 <option value="income">{{ t('income') }} 💰</option>
@@ -784,38 +997,39 @@ const handleResetPassword = async () => {
             </div>
             <div class="input-group">
               <div class="date-label-row">
-                <label>日期</label>
+                <label>{{ t('date') }}</label>
                 <div class="date-shortcuts">
-                  <span @click="setDate(-2)" class="date-chip">前天</span>
-                  <span @click="setDate(-1)" class="date-chip">昨天</span>
-                  <span @click="setDate(0)" class="date-chip">今天</span>
+                  <span @click="setDate(-2)" class="date-chip">{{ t('day_before_yesterday') }}</span>
+                  <span @click="setDate(-1)" class="date-chip">{{ t('yesterday') }}</span>
+                  <span @click="setDate(0)" class="date-chip">{{ t('today') }}</span>
                 </div>
               </div>
-              <input v-model="form.date" type="date" required />
+              <input v-model="form.date" type="date" :lang="currentLocale" required />
             </div>
             <div class="input-group">
               <label>{{ form.type === 'transfer' ? t('from_account') : t('account') }}</label>
               <select v-model="form.payment_method">
-                <option value="Cash">現金</option>
-                <option value="Credit Card">信用卡</option>
-                <option value="Bank">銀行帳戶</option>
-                <option value="LinePay">LinePay</option>
+                <option value="Cash">{{ t('cash') }}</option>
+                <option value="Credit Card">{{ t('credit_card') }}</option>
+                <option value="Bank">{{ t('bank') }}</option>
+                <option value="LinePay">{{ t('linepay') }}</option>
               </select>
             </div>
           </div>
           <div class="form-row">
-            <div class="input-group flex-2">
+            <div class="input-group">
               <label>{{ t('item_desc') }}</label>
               <input v-model="form.title" placeholder="..." required />
             </div>
             <div class="input-group">
               <label>{{ t('amount') }}</label>
-              <div style="display: flex; gap: 5px;">
+              <div style="display: flex; gap: 5px; align-items: center;">
                 <select v-model="form.currency" style="width: 140px;">
                   <option v-for="c in currencyOptions" :key="c.code" :value="c.code">
                     {{ c.code }} {{ c.name }}
                   </option>
                 </select>
+                <button @click="setDefaultCurrency" class="btn-icon-sm" title="設為預設">⭐</button>
                 <input v-if="form.currency === 'TWD'" v-model="form.amount" type="number" placeholder="NT$" required style="flex:1;" />
                 <input v-else v-model="form.foreign_amount" type="number" :placeholder="form.currency" required style="flex:1;" />
               </div>
@@ -824,7 +1038,10 @@ const handleResetPassword = async () => {
 
           <div class="form-row" v-if="form.currency !== 'TWD'">
             <div class="input-group">
-                <label>{{ t('rate') }} (1 {{form.currency}} ≈ ? TWD) <span v-if="rateUpdatedAt" style="font-size:0.7rem; color:#888;">({{ t('updated_at') }}: {{rateUpdatedAt}})</span></label>
+                <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                  <label>{{ t('rate') }} (1 {{form.currency}} ≈ ? TWD)</label>
+                  <span v-if="rateUpdatedAt" style="font-size:0.7rem; color:#888; margin-bottom:4px;">{{ t('updated_at') }}: {{rateUpdatedAt}}</span>
+                </div>
                 <input v-model="form.exchange_rate" type="number" step="0.0001" placeholder="Exchange Rate" />
             </div>
             <div class="input-group">
@@ -840,7 +1057,7 @@ const handleResetPassword = async () => {
               </div>
               <select v-model="form.category">
                 <option v-for="cat in availableCategories" :key="cat.name" :value="cat.name">
-                  {{ cat.icon }} {{ cat.name }}
+                  {{ cat.icon }} {{ t_category(cat.name) }}
                 </option>
               </select>
             </div>
@@ -850,22 +1067,22 @@ const handleResetPassword = async () => {
             <div class="input-group flex-full">
               <label>{{ t('to_account') }}</label>
               <select v-model="form.target_account" required>
-                <option value="" disabled>請選擇</option>
-                <option value="Cash">現金</option>
-                <option value="Credit Card">信用卡</option>
-                <option value="Bank">銀行帳戶</option>
-                <option value="LinePay">LinePay</option>
+                <option value="" disabled>-</option>
+                <option value="Cash">{{ t('cash') }}</option>
+                <option value="Credit Card">{{ t('credit_card') }}</option>
+                <option value="Bank">{{ t('bank') }}</option>
+                <option value="LinePay">{{ t('linepay') }}</option>
               </select>
             </div>
           </div>
           <div class="form-row">
             <div class="input-group flex-full">
-              <label>📝 {{ t('note') }} (選填)</label>
+              <label>📝 {{ t('note') }}</label>
               <textarea v-model="form.note" placeholder="..." rows="2" class="note-textarea"></textarea>
             </div>
           </div>
           <button @click="handleSubmit" class="btn-submit" :class="{ 'btn-update': isEditing }">
-            {{ isEditing ? t('update') : t('submit') }}
+             {{ isEditing ? (form.type === 'expense' ? '💸 ' : (form.type === 'income' ? '💰 ' : '🔄 ')) + t('update') : (form.type === 'expense' ? '💸 ' : (form.type === 'income' ? '💰 ' : '🔄 ')) + t('submit') }}
           </button>
         </div>
       </div>
@@ -874,16 +1091,16 @@ const handleResetPassword = async () => {
         <div class="filter-bar">
           <button @click="showCalendar = !showCalendar" class="btn-icon calendar-btn" :class="{ active: showCalendar }">📅</button>
           <div class="search-box">
-            <input v-model="keyword" type="text" placeholder="🔍 關鍵字..." />
+            <input v-model="keyword" type="text" :placeholder="t('keyword_search')" />
           </div>
           <div class="date-range">
-            <input v-model="startDate" type="date" />
-            <span>至</span>
-            <input v-model="endDate" type="date" />
+            <input v-model="startDate" type="date" :lang="currentLocale" />
+            <span>{{ t('to_date') }}</span>
+            <input v-model="endDate" type="date" :lang="currentLocale" />
           </div>
         </div>
         
-        <CalendarView v-if="showCalendar" :trendData="trendData" @date-selected="handleDateSelect" />
+        <CalendarView v-if="showCalendar" :trendData="trendData" :locale="currentLocale" @date-selected="handleDateSelect" />
 
         <div v-if="transactions.length === 0" class="empty-state">無資料...</div>
         <div v-else class="transaction-list">
@@ -891,15 +1108,15 @@ const handleResetPassword = async () => {
             <div class="item-left">
               <div class="date-badge">
                 <span class="day">{{ item.date.split('-')[2] }}</span>
-                <span class="month">{{ item.date.split('-')[1] }}月</span>
+                <span class="month">{{ formatDateBadge(item.date) }}</span>
               </div>
               <div class="item-info">
                 <div class="item-title">{{ item.title }}</div>
                 <div class="tags">
                   <span class="tag type-tag" :class="item.type">
-                    {{ item.type === 'transfer' ? t('transfer') : item.category }}
+                    {{ item.type === 'transfer' ? t('transfer') : t_category(item.category) }}
                   </span>
-                  <span class="tag method">{{ item.payment_method }}</span>
+                  <span class="tag method">{{ t(item.payment_method.toLowerCase()) || item.payment_method }}</span>
                 </div>
                 <div v-if="item.note" class="item-note">📝 {{ item.note }}</div>
               </div>
@@ -997,7 +1214,29 @@ body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
 .modal-card h2 { margin: 0 0 20px 0; color: #2c3e50; }
 .invite-code-display { font-size: 2.5rem; font-weight: bold; color: #11998e; letter-spacing: 8px; padding: 20px; background: #f8f9fa; border-radius: 12px; margin-bottom: 15px; font-family: monospace; }
 .invite-hint { color: #666; font-size: 0.9rem; margin: 10px 0; }
+.invite-hint { color: #666; font-size: 0.9rem; margin: 10px 0; }
 .invite-expires { color: #e67e22; font-size: 0.85rem; }
+
+/* Language Selector */
+.lang-select {
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23333%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 10px;
+  padding-right: 25px;
+  margin-right: 10px;
+}
+.lang-select:hover { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+html.dark-mode .lang-select { background-color: #2d3748; border-color: #4a5568; color: #fff; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23fff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E"); }
 .invite-input { width: 100%; padding: 15px; font-size: 1.2rem; text-align: center; letter-spacing: 5px; border: 2px solid #e0e0e0; border-radius: 10px; margin-bottom: 15px; text-transform: uppercase; }
 .invite-input:focus { border-color: #667eea; outline: none; }
 .modal-actions { display: flex; gap: 10px; justify-content: center; }
@@ -1083,6 +1322,8 @@ body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
 .button-group { display: flex; gap: 10px; margin-top: 10px; }
 .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.5); color: white; padding: 5px 15px; border-radius: 20px; cursor: pointer; }
 .btn-outline:hover { background: rgba(255,255,255,0.1); }
+.btn-icon-sm { background: transparent; border: none; font-size: 1rem; cursor: pointer; padding: 2px 5px; transition: transform 0.2s; flex-shrink: 0; }
+.btn-icon-sm:hover { transform: scale(1.2); }
 
 /* Form */
 .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
@@ -1131,7 +1372,8 @@ input:focus, select:focus { border-color: #3498db; outline: none; }
 /* Date Shortcuts */
 .date-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
 .date-label-row label { margin-bottom: 0; }
-.date-shortcuts { display: flex; gap: 5px; }
+.date-shortcuts { display: flex; gap: 5px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; mask-image: linear-gradient(to right, black 85%, transparent 100%); }
+.date-shortcuts::-webkit-scrollbar { display: none; }
 .date-chip { 
   font-size: 0.75rem; 
   padding: 1px 6px; 

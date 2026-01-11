@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 
-const props = defineProps(['trendData'])
+const props = defineProps(['trendData', 'locale'])
 const emit = defineEmits(['date-selected'])
 
 const currentDate = ref(new Date())
@@ -9,7 +9,19 @@ const currentDate = ref(new Date())
 const currentYear = computed(() => currentDate.value.getFullYear())
 const currentMonth = computed(() => currentDate.value.getMonth())
 
-const monthNames = ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"]
+const computedHeader = computed(() => {
+  return new Date(currentYear.value, currentMonth.value).toLocaleString(props.locale, { month: 'long', year: 'numeric' })
+})
+
+const weekDays = computed(() => {
+  const days = []
+  // Use a known Sunday (2024-01-07) to generate loop
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(2024, 0, 7 + i)
+    days.push(d.toLocaleString(props.locale, { weekday: 'short' }))
+  }
+  return days
+})
 
 const daysInMonth = computed(() => new Date(currentYear.value, currentMonth.value + 1, 0).getDate())
 const firstDayOfWeek = computed(() => new Date(currentYear.value, currentMonth.value, 1).getDay())
@@ -70,18 +82,12 @@ const selectDate = (date) => {
   <div class="calendar-container">
     <div class="calendar-header">
       <button @click="prevMonth" class="btn-nav">&lt;</button>
-      <h3>{{ currentYear }}年 {{ monthNames[currentMonth] }}</h3>
+      <h3>{{ computedHeader }}</h3>
       <button @click="nextMonth" class="btn-nav">&gt;</button>
     </div>
     
     <div class="calendar-grid">
-      <div class="weekday">日</div>
-      <div class="weekday">一</div>
-      <div class="weekday">二</div>
-      <div class="weekday">三</div>
-      <div class="weekday">四</div>
-      <div class="weekday">五</div>
-      <div class="weekday">六</div>
+      <div v-for="day in weekDays" :key="day" class="weekday">{{ day }}</div>
       
       <div 
         v-for="(item, index) in calendarDays" 
