@@ -987,12 +987,15 @@ async def import_file(file: UploadFile = File(...), current_user: dict = Depends
             
             # 處理日期 (確保是 datetime 物件，方便 MongoDB 查詢與排序)
             try:
-                if isinstance(r["date"], str):
-                    r["date"] = datetime.strptime(r["date"], "%Y-%m-%d")
-                elif isinstance(r["date"], pd.Timestamp):
-                    r["date"] = r["date"].to_pydatetime()
-            except:
-                # 若日期格式錯誤，嘗試自動解析或設為今天
+                # 使用 pandas 強大的日期解析功能，支援多種格式 (2024/1/1, 2024-01-01, etc.)
+                if r.get("date"):
+                    dt = pd.to_datetime(r["date"])
+                    r["date"] = dt.to_pydatetime()
+                else:
+                    r["date"] = datetime.now()
+            except Exception as e:
+                print(f"Date parse error for {r.get('date')}: {e}")
+                # 若日期格式真的無法解析，設為今天，避免匯入失敗
                 r["date"] = datetime.now()
             
             final_records.append(r)
