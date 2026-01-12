@@ -29,16 +29,7 @@
           >
             🚪 {{ t('remove_from_family') }}
           </button>
-
-          <!-- Button for users not in any family -->
-          <button 
-            v-if="user.username !== 'admin' && !user.family_id" 
-            @click="handleAdd(user)" 
-            class="btn-action add-family"
-            :disabled="isLoading"
-          >
-            ➕ {{ t('add_to_family') }}
-          </button>
+          <!-- 管理員只能移出成員，加入成員請使用邀請碼功能 -->
         </div>
       </div>
     </div>
@@ -96,21 +87,6 @@ const handleRemove = async (user) => {
   }
 }
 
-const handleAdd = async (user) => {
-  if (!confirm(t('add_to_family_hint'))) return
-  isLoading.value = true
-  try {
-    const res = await axios.post(`http://127.0.0.1:8000/api/family/add-member?admin_id=${props.currentUser.id}&member_id=${user.id}`)
-    alert(res.data.message)
-    await fetchUsers()
-    emit('refresh-user')
-  } catch (err) {
-    alert(err.response?.data?.detail || t('add_failed'))
-  } finally {
-    isLoading.value = false
-  }
-}
-
 onMounted(() => {
   fetchUsers()
 })
@@ -159,8 +135,6 @@ onMounted(() => {
 .btn-action { padding: 8px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: all 0.3s; font-weight: 600; }
 .btn-action.remove-family { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
 .btn-action.remove-family:hover { background: #dc2626; color: white; }
-.btn-action.add-family { background: #d1fae5; color: #059669; border: 1px solid #a7f3d0; }
-.btn-action.add-family:hover { background: #059669; color: white; }
 .btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
 
 :global(.dark) .user-manager { background: #16213e; }

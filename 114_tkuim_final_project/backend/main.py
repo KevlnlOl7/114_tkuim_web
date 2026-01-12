@@ -902,7 +902,11 @@ def export_excel(current_user: dict = Depends(get_current_user)):
     df = df[[c for c in cols if c in df.columns]]
     filename = "PyMoney_Export.xlsx"
     df.to_excel(filename, index=False)
-    return FileResponse(filename, filename=filename)
+    return FileResponse(
+        filename, 
+        filename=filename,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 # [匯入] Excel/CSV (新功能!)
 @app.post("/api/import")

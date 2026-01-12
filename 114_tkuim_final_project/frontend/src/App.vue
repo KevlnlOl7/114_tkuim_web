@@ -603,6 +603,34 @@ onMounted(() => {
     if (currentUser.value?.family_id) {
       fetchFamilyMembers()
     }
+    
+    // 定期檢查使用者狀態（每 30 秒），偵測是否被移出家庭
+    setInterval(async () => {
+      if (currentUser.value && isLoggedIn.value) {
+        try {
+          const res = await axios.get(`http://127.0.0.1:8000/api/users/${currentUser.value.id}`)
+          if (res.data) {
+            const oldFamilyId = currentUser.value.family_id
+            const newFamilyId = res.data.family_id
+            
+            // 如果家庭狀態有變化
+            if (oldFamilyId !== newFamilyId) {
+              currentUser.value = { ...currentUser.value, ...res.data }
+              localStorage.setItem('user', JSON.stringify(currentUser.value))
+              
+              if (newFamilyId) {
+                await fetchFamilyMembers()
+              } else {
+                familyMembers.value = []
+                familyName.value = ''
+              }
+            }
+          }
+        } catch (err) {
+          // 靜默失敗，避免干擾用戶
+        }
+      }
+    }, 30000) // 每 30 秒檢查一次
   }
 })
 </script>
