@@ -9,6 +9,7 @@ import RegisterPage from './components/RegisterPage.vue'
 import UserManager from './components/UserManager.vue'
 import TransactionForm from './components/TransactionForm.vue'
 import TransactionList from './components/TransactionList.vue'
+import AssetsDashboard from './components/AssetsDashboard.vue'
 import StatsPanel from './components/StatsPanel.vue'
 import QuickEntry from './components/QuickEntry.vue'
 import { t, currentLocale, setLocale } from './i18n.js'
@@ -18,7 +19,6 @@ const currentPage = ref('login')
 const isLoggedIn = ref(false)
 const currentUser = ref(null)
 const showUserManager = ref(false)
-const showCalendar = ref(false)
 const showCategoryManager = ref(false)
 const showPaymentMethodManager = ref(false)
 
@@ -34,8 +34,10 @@ const accountTotalAmount = ref(0) // 帳戶餘額總計
 
 // --- Filter State ---
 const keyword = ref('')
-const startDate = ref('')
-const endDate = ref('')
+const startDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10))
+const endDate = ref(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10))
+const showCalendar = ref(false)
+const calendarSelectedDate = ref(null)
 
 // --- Edit State ---
 const isEditing = ref(false)
@@ -843,6 +845,13 @@ onMounted(() => {
         </div>
       </div>
 
+      <!-- Assets Dashboard (New Phase 2) -->
+      <AssetsDashboard 
+        v-if="currentUser" 
+        :currentUser="currentUser" 
+        ref="assetsDashboardRef"
+      />
+
       <!-- Stats Panel -->
       <StatsPanel 
         :stats="stats"
@@ -851,6 +860,7 @@ onMounted(() => {
         :monthlyExpense="monthlyExpense"
         :totalAmount="totalAmount"
         :categories="categories"
+        :transactions="transactions"
         @update-budget="saveBudget"
         @import="handleImport"
         @export="exportExcel"
@@ -884,12 +894,20 @@ onMounted(() => {
         v-model:startDate="startDate"
         v-model:endDate="endDate"
         v-model:showCalendar="showCalendar"
+        :filterDate="calendarSelectedDate"
         @edit="startEdit"
         @delete="removeTransaction"
         @duplicate="duplicateTransaction"
       >
         <template #calendar>
-          <CalendarView v-if="showCalendar" :trendData="trendData" :locale="currentLocale" @date-selected="handleDateSelect" />
+          <CalendarView 
+            v-if="showCalendar" 
+            :trendData="trendData" 
+            :locale="currentLocale" 
+            :selectedDate="calendarSelectedDate"
+            @date-selected="handleDateSelect" 
+            @month-change="handleMonthChange"
+          />
         </template>
       </TransactionList>
     </div>

@@ -93,7 +93,13 @@ const messages = {
         change_password: '修改密碼', old_password_ph: '請輸入原密碼',
         new_password_ph: '請輸入新密碼', confirm_password_ph: '確認新密碼',
         password_changed: '密碼已成功修改', old_password_wrong: '原密碼錯誤',
-        budget_negative_error: '預算不能為負數', no_data_to_export: '無資料可匯出，請先新增交易紀錄'
+        budget_negative_error: '預算不能為負數', no_data_to_export: '無資料可匯出，請先新增交易紀錄',
+        day: '日', month: '月', year: '年',
+        last_7_days: '近7天', 'last_30_days': '近30天', 'this_year': '今年', 'all_time': '全部',
+        payment_method: '帳戶', member: '成員', this_month: '本月', last_month: '上月',
+        preset: '快速選擇', range: '自訂期間',
+        net_assets: '淨資產', cash: '現金', bank: '銀行', credit_card: '信用卡', linepay: 'LinePay',
+        loading: '載入中...',
     },
     'en-US': {
         item_desc: 'Title', amount: 'Amount', date: 'Date', category: 'Category',
@@ -184,7 +190,13 @@ const messages = {
         change_password: 'Change Password', old_password_ph: 'Old Password',
         new_password_ph: 'New Password', confirm_password_ph: 'Confirm Password',
         password_changed: 'Password changed successfully', old_password_wrong: 'Old password is correct',
-        budget_negative_error: 'Budget cannot be negative', no_data_to_export: 'No data to export, please add transactions first'
+        budget_negative_error: 'Budget cannot be negative', no_data_to_export: 'No data to export, please add transactions first',
+        day: 'Day', month: 'Month', year: 'Year',
+        last_7_days: 'Last 7 Days', 'last_30_days': 'Last 30 Days', 'this_year': 'This Year', 'all_time': 'All Time',
+        payment_method: 'Account', member: 'Member', this_month: 'This Month', last_month: 'Last Month',
+        preset: 'Preset', range: 'Custom Range',
+        net_assets: 'Net Assets', cash: 'Cash', bank: 'Bank', credit_card: 'Credit Card', linepay: 'LinePay',
+        loading: 'Loading...',
     },
     'vi': {
         item_desc: 'Tiêu đề', amount: 'Số tiền', date: 'Ngày', category: 'Danh mục',

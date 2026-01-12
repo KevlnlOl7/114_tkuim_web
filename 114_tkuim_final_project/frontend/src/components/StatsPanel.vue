@@ -6,7 +6,8 @@ import BarChart from './BarChart.vue'
 
 const props = defineProps({
   stats: { type: Object, required: true },
-  trendData: { type: Object, required: true },
+  trendData: { type: Object, required: true }, // Initial data from backend
+  transactions: { type: Array, default: () => [] }, // For frontend dynamic calc
   budgetLimit: { type: Number, default: 0 },
   monthlyExpense: { type: Number, default: 0 },
   totalAmount: { type: Number, default: 0 },
@@ -18,6 +19,137 @@ const emit = defineEmits(['update-budget', 'import', 'export', 'download-sample'
 const showBudgetInput = ref(false)
 const newBudget = ref(0)
 const fileInput = ref(null)
+
+// Analysis Chart Controls
+const analysisType = ref('category')
+const analysisFilterType = ref('preset') // preset, year, month, day, range
+const analysisPreset = ref('thisMonth')
+const analysisYear = ref(new Date().getFullYear())
+const analysisMonth = ref(new Date().toISOString().slice(0, 7)) // YYYY-MM
+const analysisDay = ref(new Date().toISOString().slice(0, 10)) // YYYY-MM-DD
+const analysisStart = ref('')
+const analysisEnd = ref('')
+
+// Trend Chart Controls
+const chartGranularity = ref('day')
+const trendFilterType = ref('preset') // preset, year, month, day, range
+const trendPreset = ref('30d')
+const trendYear = ref(new Date().getFullYear())
+const trendMonth = ref(new Date().toISOString().slice(0, 7))
+const trendDay = ref(new Date().toISOString().slice(0, 10))
+const trendStart = ref('')
+const trendEnd = ref('')
+
+const years = computed(() => {
+  const current = new Date().getFullYear()
+  const list = []
+  for (let i = 0; i < 5; i++) list.push(current - i)
+  return list
+})
+
+const filterByDate = (transactions, type, preset, year, month, day, start, end) => {
+    let filtered = [...transactions]
+    const now = new Date()
+    
+    if (type === 'preset') {
+        if (preset === '7d' || preset === 'last_7_days') {
+            const limit = new Date(); limit.setDate(now.getDate() - 7); limit.setHours(0,0,0,0)
+            filtered = filtered.filter(t => new Date(t.date) >= limit)
+        } else if (preset === '30d' || preset === 'last_30_days') {
+            const limit = new Date(); limit.setDate(now.getDate() - 30); limit.setHours(0,0,0,0)
+            filtered = filtered.filter(t => new Date(t.date) >= limit)
+        } else if (preset === 'thisYear' || preset === 'this_year') {
+            const limit = new Date(now.getFullYear(), 0, 1)
+            filtered = filtered.filter(t => new Date(t.date) >= limit)
+        } else if (preset === 'thisMonth' || preset === 'this_month') {
+            const s = new Date(now.getFullYear(), now.getMonth(), 1)
+            const e = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+            filtered = filtered.filter(t => new Date(t.date) >= s && new Date(t.date) <= e)
+        } else if (preset === 'lastMonth' || preset === 'last_month') {
+            const s = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+            const e = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+            filtered = filtered.filter(t => new Date(t.date) >= s && new Date(t.date) <= e)
+        }
+        // 'all' passes through
+    } else if (type === 'year') {
+        filtered = filtered.filter(t => new Date(t.date).getFullYear() === parseInt(year))
+    } else if (type === 'month') {
+        if (month) filtered = filtered.filter(t => t.date.startsWith(month))
+    } else if (type === 'day') {
+        if (day) filtered = filtered.filter(t => t.date.startsWith(day)) // Assuming YYYY-MM-DD
+    } else if (type === 'range') {
+        if (start) filtered = filtered.filter(t => new Date(t.date) >= new Date(start))
+        if (end) filtered = filtered.filter(t => new Date(t.date) <= new Date(end + 'T23:59:59'))
+    }
+    return filtered
+}
+
+const processedTrendData = computed(() => {
+  if (!props.transactions || props.transactions.length === 0) return props.trendData
+
+  const filtered = filterByDate(props.transactions, trendFilterType.value, trendPreset.value, trendYear.value, trendMonth.value, trendDay.value, trendStart.value, trendEnd.value)
+
+  // 2. Group
+  const groups = {}
+  filtered.forEach(t => {
+    const d = new Date(t.date)
+    if (isNaN(d.getTime())) return // Skip invalid dates
+    
+    let key = ''
+    if (chartGranularity.value === 'day') {
+      key = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`
+    } else if (chartGranularity.value === 'month') {
+      key = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}`
+    } else {
+      key = `${d.getFullYear()}`
+    }
+
+    if (!groups[key]) groups[key] = { expense: 0, income: 0 }
+    if (t.type === 'expense') groups[key].expense += t.amount
+    if (t.type === 'income') groups[key].income += t.amount
+  })
+
+  // 3. Sort & Format
+  const sortedKeys = Object.keys(groups).sort()
+  return {
+    dates: sortedKeys,
+    expenses: sortedKeys.map(k => groups[k].expense),
+    incomes: sortedKeys.map(k => groups[k].income)
+  }
+})
+
+const processedStats = computed(() => {
+  if (!props.transactions || props.transactions.length === 0) {
+    if (analysisType.value === 'category' && analysisFilterType.value === 'preset' && analysisPreset.value === 'thisMonth') {
+        return props.stats
+    }
+    return {}
+  }
+
+  let filtered = props.transactions.filter(t => t.type === 'expense')
+  filtered = filterByDate(filtered, analysisFilterType.value, analysisPreset.value, analysisYear.value, analysisMonth.value, analysisDay.value, analysisStart.value, analysisEnd.value)
+
+
+  // 2. Group by Dimension
+  const stats = {}
+  filtered.forEach(item => {
+    let key = 'Unknown'
+    if (analysisType.value === 'category') {
+      key = item.category || 'Uncategorized'
+    } else if (analysisType.value === 'method') {
+      key = t(item.payment_method.toLowerCase()) || item.payment_method // Try translate method
+    } else if (analysisType.value === 'member') {
+      // Use user_display_name if available, else fallback
+      // Since transactions are flattened with user_display_name in backend
+      key = item.user_display_name || 'Unknown'
+    }
+    
+    if (!stats[key]) stats[key] = 0
+    stats[key] += item.amount
+  })
+
+  return stats
+})
 
 const currentMonthLabel = computed(() => {
   return new Date().toLocaleString(currentLocale.value, { month: 'long' })
@@ -95,13 +227,87 @@ const handleImport = (event) => {
     </div>
 
     <div class="card chart-card">
-      <h3>{{ t('expense_analysis') }}</h3>
-      <Chart :stats="stats" :categories="categories" :emptyText="t('no_chart_data')" />
+      <div class="chart-header">
+        <h3>{{ t('expense_analysis') }}</h3>
+        <div class="chart-controls">
+           <select v-model="analysisType">
+             <option value="category">{{ t('category') || '類別' }}</option>
+             <option value="method">{{ t('payment_method') || '帳戶' }}</option>
+             <option value="member">{{ t('member') || '成員' }}</option>
+           </select>
+           
+           <select v-model="analysisFilterType">
+             <option value="preset">{{ t('preset') || '快速' }}</option>
+             <option value="year">{{ t('year') || '年' }}</option>
+             <option value="month">{{ t('month') || '月' }}</option>
+             <option value="day">{{ t('day') || '日' }}</option>
+             <option value="range">{{ t('range') || '期間' }}</option>
+           </select>
+
+           <select v-if="analysisFilterType === 'preset'" v-model="analysisPreset">
+             <option value="thisMonth">{{ t('this_month') || '本月' }}</option>
+             <option value="lastMonth">{{ t('last_month') || '上月' }}</option>
+             <option value="thisYear">{{ t('this_year') || '今年' }}</option>
+             <option value="all">{{ t('all_time') || '全部' }}</option>
+           </select>
+           
+           <select v-if="analysisFilterType === 'year'" v-model="analysisYear">
+             <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+           </select>
+
+           <input v-if="analysisFilterType === 'month'" type="month" v-model="analysisMonth" />
+           <input v-if="analysisFilterType === 'day'" type="date" v-model="analysisDay" />
+           
+           <div v-if="analysisFilterType === 'range'" class="range-inputs">
+             <input type="date" v-model="analysisStart" />
+             <span>~</span>
+             <input type="date" v-model="analysisEnd" />
+           </div>
+        </div>
+      </div>
+      <Chart :stats="processedStats" :categories="categories" :emptyText="t('no_chart_data')" />
     </div>
     
     <div class="card bar-chart-card full-width-card">
-      <h3>{{ t('trend_chart') }}</h3>
-      <BarChart :trendData="trendData" :expenseLabel="t('expense')" :incomeLabel="t('income')" />
+      <div class="chart-header">
+        <h3>{{ t('trend_chart') }}</h3>
+        <div class="chart-controls">
+          <select v-model="chartGranularity">
+            <option value="day">{{ t('day') || '日' }}</option>
+            <option value="month">{{ t('month') || '月' }}</option>
+            <option value="year">{{ t('year') || '年' }}</option>
+          </select>
+          
+          <select v-model="trendFilterType">
+             <option value="preset">{{ t('preset') || '快速' }}</option>
+             <option value="year">{{ t('year') || '年' }}</option>
+             <option value="month">{{ t('month') || '月' }}</option>
+             <option value="day">{{ t('day') || '日' }}</option>
+             <option value="range">{{ t('range') || '期間' }}</option>
+          </select>
+
+          <select v-if="trendFilterType === 'preset'" v-model="trendPreset">
+            <option value="7d">{{ t('last_7_days') || '近7天' }}</option>
+            <option value="30d">{{ t('last_30_days') || '近30天' }}</option>
+            <option value="thisYear">{{ t('this_year') || '今年' }}</option>
+            <option value="all">{{ t('all_time') || '全部' }}</option>
+          </select>
+
+          <select v-if="trendFilterType === 'year'" v-model="trendYear">
+             <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+          </select>
+
+          <input v-if="trendFilterType === 'month'" type="month" v-model="trendMonth" />
+          <input v-if="trendFilterType === 'day'" type="date" v-model="trendDay" />
+          
+          <div v-if="trendFilterType === 'range'" class="range-inputs">
+             <input type="date" v-model="trendStart" />
+             <span>~</span>
+             <input type="date" v-model="trendEnd" />
+          </div>
+        </div>
+      </div>
+      <BarChart :trendData="processedTrendData" :expenseLabel="t('expense')" :incomeLabel="t('income')" />
     </div>
   </div>
 </template>
@@ -146,4 +352,10 @@ const handleImport = (event) => {
 :global(.dark) .budget-info { color: #a0a0a0; }
 :global(.dark) .progress-container { background: #2d3748; }
 :global(.dark) .budget-input-area input { background: #2d3748; color: #e0e0e0; border-color: #4a5568; }
+/* Chart Controls */
+.chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+.chart-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.chart-controls select, .chart-controls input { padding: 4px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; cursor: pointer; }
+.range-inputs { display: flex; align-items: center; gap: 5px; }
+:global(.dark) .chart-controls select, :global(.dark) .chart-controls input { background: #2d3748; color: #e0e0e0; border-color: #4a5568; }
 </style>

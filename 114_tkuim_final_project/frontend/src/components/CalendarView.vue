@@ -1,8 +1,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 
-const props = defineProps(['trendData', 'locale'])
-const emit = defineEmits(['date-selected'])
+const props = defineProps(['trendData', 'locale', 'selectedDate'])
+const emit = defineEmits(['date-selected', 'month-change'])
 
 const currentDate = ref(new Date())
 
@@ -53,13 +53,15 @@ const calendarDays = computed(() => {
     const data = dailyDataMap.value[dateStr]
     const hasData = !!data
     const totalExpense = data ? data.expense : 0
+    const totalIncome = data ? data.income : 0
 
     days.push({ 
       day: i, 
       date: dateStr, 
       empty: false,
       hasData,
-      totalExpense
+      totalExpense,
+      totalIncome
     })
   }
   return days
@@ -67,14 +69,21 @@ const calendarDays = computed(() => {
 
 const prevMonth = () => {
   currentDate.value = new Date(currentYear.value, currentMonth.value - 1, 1)
+  emit('month-change', currentDate.value)
 }
 
 const nextMonth = () => {
   currentDate.value = new Date(currentYear.value, currentMonth.value + 1, 1)
+  emit('month-change', currentDate.value)
 }
 
 const selectDate = (date) => {
-  if (date) emit('date-selected', date)
+  // Toggle off if clicking the same date
+  if (date === props.selectedDate) {
+    emit('date-selected', null)
+  } else {
+    emit('date-selected', date)
+  }
 }
 </script>
 
@@ -93,13 +102,18 @@ const selectDate = (date) => {
         v-for="(item, index) in calendarDays" 
         :key="index"
         class="day-cell"
-        :class="{ 'empty': item.empty, 'has-data': item.hasData }"
+        :class="{ 
+            'empty': item.empty, 
+            'has-data': item.hasData,
+            'selected': item.date === selectedDate
+        }"
         @click="!item.empty && selectDate(item.date)"
       >
         <span v-if="!item.empty" class="day-num">{{ item.day }}</span>
-        <div v-if="!item.empty && item.hasData" class="day-dots">
-          <span class="dot"></span>
-          <span v-if="item.totalExpense > 0" class="expense-tag">-${{ item.totalExpense }}</span>
+        <div v-if="!item.empty && item.hasData" class="day-data">
+          <!-- Tian Tian Style: Show Income (Green) then Expense (Red) -->
+          <span v-if="item.totalIncome > 0" class="income-tag">+{{ Math.round(item.totalIncome) }}</span>
+          <span v-if="item.totalExpense > 0" class="expense-tag">-{{ Math.round(item.totalExpense) }}</span>
         </div>
       </div>
     </div>
@@ -192,26 +206,31 @@ const selectDate = (date) => {
   color: #2d3436;
 }
 
-.day-dots {
+.day-data {
   display: flex;
   flex-direction: column;
+  align-items: flex-end; /* Align numbers to right or center? Center is better for small grid. Let's try center. */
   align-items: center;
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   margin-top: 2px;
+  line-height: 1.1;
+  width: 100%;
 }
 
-.dot {
-  width: 4px;
-  height: 4px;
-  background: #667eea;
-  border-radius: 50%;
-  margin-bottom: 2px;
+.day-cell.selected {
+  border: 2px solid #667eea;
+  background: #eef2f7;
+  transform: scale(0.98);
+}
+
+.income-tag {
+  color: #27ae60;
+  font-weight: bold;
 }
 
 .expense-tag {
   color: #e74c3c;
   font-weight: bold;
-  font-size: 0.65rem;
 }
 
 /* Dark Mode */

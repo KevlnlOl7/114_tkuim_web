@@ -1,12 +1,16 @@
 <script setup>
+import { ref, computed } from 'vue'
 import { t, t_category, currentLocale } from '../i18n.js'
+
+
 
 const props = defineProps({
   transactions: { type: Array, required: true },
   keyword: { type: String, default: '' },
   startDate: { type: String, default: '' },
   endDate: { type: String, default: '' },
-  showCalendar: { type: Boolean, default: false }
+  showCalendar: { type: Boolean, default: false },
+  filterDate: { type: String, default: null }
 })
 
 const emit = defineEmits([
@@ -19,6 +23,41 @@ const emit = defineEmits([
   'update:showCalendar',
   'date-selected'
 ])
+
+const sortBy = ref('date_desc') // date_desc, date_asc, amount_desc, amount_asc
+
+const sortedTransactions = computed(() => {
+  // Create a copy to sort
+  let list = [...props.transactions]
+  
+  // Filter by filterDate if present
+  if (props.filterDate) {
+    list = list.filter(t => t.date.startsWith(props.filterDate))
+  }
+
+  // Sort
+  list.sort((a, b) => {
+    if (sortBy.value === 'date_desc') {
+      return new Date(b.date) - new Date(a.date)
+    } else if (sortBy.value === 'date_asc') {
+      return new Date(a.date) - new Date(b.date)
+    } else if (sortBy.value === 'amount_desc') {
+      return b.amount - a.amount
+    } else if (sortBy.value === 'amount_asc') {
+      return a.amount - b.amount
+    }
+    return 0
+  })
+  
+  return list
+})
+
+const getDay = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return ''
+  return date.getDate()
+}
 
 const formatDateBadge = (dateStr) => {
   const date = new Date(dateStr)
@@ -43,6 +82,15 @@ const formatDateBadge = (dateStr) => {
           :placeholder="t('keyword_search')" 
         />
       </div>
+      
+      <div class="sort-box">
+        <select v-model="sortBy" class="sort-select">
+          <option value="date_desc">📅 日期 (新→舊)</option>
+          <option value="date_asc">📅 日期 (舊→新)</option>
+          <option value="amount_desc">💰 金額 (大→小)</option>
+          <option value="amount_asc">💰 金額 (小→大)</option>
+        </select>
+      </div>
       <div class="date-range">
         <input 
           :value="startDate" 
@@ -62,12 +110,12 @@ const formatDateBadge = (dateStr) => {
     
     <slot name="calendar"></slot>
 
-    <div v-if="transactions.length === 0" class="empty-state">{{ t('no_data') }}</div>
+    <div v-if="sortedTransactions.length === 0" class="empty-state">{{ t('no_data') }}</div>
     <div v-else class="transaction-list">
-      <div v-for="item in transactions" :key="item.id" class="list-item">
+      <div v-for="item in sortedTransactions" :key="item.id" class="list-item">
         <div class="item-left">
           <div class="date-badge">
-            <span class="day">{{ item.date.split('-')[2] }}</span>
+            <span class="day">{{ getDay(item.date) }}</span>
             <span class="month">{{ formatDateBadge(item.date) }}</span>
           </div>
           <div class="item-info">
@@ -110,6 +158,8 @@ const formatDateBadge = (dateStr) => {
 .date-range { display: flex; align-items: center; gap: 3px; background: white; padding: 4px 6px; border-radius: 6px; border: 2px solid #ddd; flex-shrink: 0; }
 .date-range input { border: none; padding: 4px; width: 110px; font-size: 0.8rem; }
 .date-range span { font-size: 0.75rem; color: #666; }
+.sort-box { flex-shrink: 0; }
+.sort-select { padding: 8px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9rem; cursor: pointer; background: white; }
 .empty-state { text-align: center; padding: 40px; color: #999; }
 .transaction-list { display: flex; flex-direction: column; gap: 10px; }
 .list-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #34495e; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
