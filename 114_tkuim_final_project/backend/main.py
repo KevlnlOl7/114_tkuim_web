@@ -954,7 +954,7 @@ def get_import_sample(format: str = "csv"):
 
 # [匯入] Excel/CSV (新功能!)
 @app.post("/api/import")
-async def import_file(file: UploadFile = File(...)):
+async def import_file(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
     try:
         contents = await file.read()
         
@@ -979,11 +979,29 @@ async def import_file(file: UploadFile = File(...)):
         # 轉成字典列表
         records = df.to_dict(orient="records")
         
-        # 寫入資料庫
-        if records:
-            collection.insert_many(records)
+        # 補上 user_id 並處理日期
+        final_records = []
+        for r in records:
+            # 確保有 user_id
+            r["user_id"] = current_user["id"]
             
-        return {"message": f"成功匯入 {len(records)} 筆資料"}
+            # 處理日期 (確保是 datetime 物件，方便 MongoDB 查詢與排序)
+            try:
+                if isinstance(r["date"], str):
+                    r["date"] = datetime.strptime(r["date"], "%Y-%m-%d")
+                elif isinstance(r["date"], pd.Timestamp):
+                    r["date"] = r["date"].to_pydatetime()
+            except:
+                # 若日期格式錯誤，嘗試自動解析或設為今天
+                r["date"] = datetime.now()
+            
+            final_records.append(r)
+        
+        # 寫入資料庫
+        if final_records:
+            collection.insert_many(final_records)
+            
+        return {"message": f"成功匯入 {len(final_records)} 筆資料"}
         
     except Exception as e:
         print(f"Import error: {e}")
