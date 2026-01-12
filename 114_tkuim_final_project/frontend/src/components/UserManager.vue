@@ -6,7 +6,10 @@
     </div>
     
     <div class="user-list">
-      <div v-for="user in users" :key="user.id" class="user-card">
+      <div v-if="isLoading" class="list-status">{{ t('loading') }}...</div>
+      <div v-else-if="errorMsg" class="list-status error">{{ errorMsg }}</div>
+      <div v-else-if="users.length === 0" class="list-status">{{ t('no_users_found') }}</div>
+      <div v-else v-for="user in users" :key="user.id" class="user-card">
         <div class="user-info">
           <div class="user-avatar">{{ user.display_name.charAt(0) }}</div>
           <div class="user-details">
@@ -54,15 +57,29 @@ const emit = defineEmits(['close', 'refresh-user', 'remove-member', 'add-member'
 
 const users = ref([])
 const isLoading = ref(false)
+const errorMsg = ref('')
 
 const fetchUsers = async () => {
+  isLoading.value = true
+  errorMsg.value = ''
   try {
+    const savedUser = localStorage.getItem('user')
+    if (savedUser) {
+      const user = JSON.parse(savedUser)
+      if (user.token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${user.token}`
+      }
+    }
     const res = await axios.get('http://127.0.0.1:8000/api/users')
     users.value = res.data
   } catch (err) {
-    console.error(t('load_users_failed'), err)
+    console.error('Load users failed:', err)
+    errorMsg.value = err.response?.data?.detail || '無法載入'
+  } finally {
+    isLoading.value = false
   }
 }
+
 
 const handleRemove = async (user) => {
   if (!confirm(t('confirm_remove_member', { name: user.display_name }))) return
@@ -117,6 +134,8 @@ onMounted(() => {
 }
 .btn-close:hover { background: #e74c3c; color: white; }
 .user-list { display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto; }
+.list-status { text-align: center; padding: 20px; color: #636e72; font-style: italic; }
+.list-status.error { color: #e74c3c; font-weight: bold; }
 .user-card {
   display: flex; justify-content: space-between; align-items: center;
   padding: 12px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);

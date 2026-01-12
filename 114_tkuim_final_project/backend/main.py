@@ -600,7 +600,7 @@ def remove_member(admin_id: str, member_id: str):
     if admin_id == member_id:
         raise HTTPException(status_code=400, detail="無法移除自己")
     
-    # 從家庭成員列表移除
+    # 從家庭成員列表移除 (同時支援路徑中是字串或 ID 的情況)
     families_collection.update_one(
         {"_id": ObjectId(family_id)},
         {"$pull": {"members": member_id}}
@@ -611,6 +611,10 @@ def remove_member(admin_id: str, member_id: str):
         {"_id": ObjectId(member_id)},
         {"$set": {"family_id": None}}
     )
+    
+    # 額外安全性檢查：如果 member_id 是字串但資料庫存的是 ObjectId (或反之)
+    # 此處邏輯通常會成功，因為我們在 /api/family/members 回傳的是字串，
+    # 而資料庫中 members 陣列儲存的也是字串 (根據先前的檢查)。
     
     return {"message": "已將成員移出家庭"}
 

@@ -311,8 +311,23 @@ const saveBudget = async (amount) => {
 }
 
 // --- Import/Export ---
-const exportExcel = () => { 
-  window.open('http://127.0.0.1:8000/api/export', '_blank') 
+const exportExcel = async () => { 
+  try {
+    const res = await axios.get('http://127.0.0.1:8000/api/export', {
+      responseType: 'blob'
+    })
+    // 建立 Blob 下載連結
+    const url = window.URL.createObjectURL(new Blob([res.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'PyMoney_Export.xlsx')
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    alert('匯出失敗：' + (error.response?.data?.detail || error.message))
+  }
 }
 
 const handleImport = async (file) => {
