@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import axios from 'axios'
+import { t } from '../i18n.js'
 
 const props = defineProps(['show', 'categories', 'currentUser'])
 const emit = defineEmits(['close', 'updated'])
@@ -31,7 +32,7 @@ const filteredCategories = computed(() => {
 })
 
 const addCategory = async () => {
-  if (!newCat.value.name) return alert('請輸入分類名稱')
+  if (!newCat.value.name) return alert(t('input_name_hint'))
   
   try {
     await axios.post('http://127.0.0.1:8000/api/categories', {
@@ -43,17 +44,17 @@ const addCategory = async () => {
     newCat.value.name = '' // Reset name
     // Keep icon/color or reset?
   } catch (err) {
-    alert('新增失敗')
+    alert(t('add_failed'))
   }
 }
 
 const deleteCategory = async (id) => {
-  if (!confirm('確定要刪除此分類嗎？')) return
+  if (!confirm(t('delete_confirm_cat'))) return
   try {
     await axios.delete(`http://127.0.0.1:8000/api/categories/${id}`)
     emit('updated')
   } catch (err) {
-    alert('刪除失敗')
+    alert(t('delete_failed'))
   }
 }
 </script>
@@ -62,7 +63,7 @@ const deleteCategory = async (id) => {
   <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>⚙️ 分類管理</h3>
+        <h3>⚙️ {{ t('category_mgmt') }}</h3>
         <button @click="$emit('close')" class="btn-close">×</button>
       </div>
 
@@ -70,11 +71,11 @@ const deleteCategory = async (id) => {
         <button 
           :class="{ active: activeTab === 'expense' }" 
           @click="activeTab = 'expense'"
-        >支出 (Expense)</button>
+        >{{ t('expense') }}</button>
         <button 
           :class="{ active: activeTab === 'income' }" 
           @click="activeTab = 'income'"
-        >收入 (Income)</button>
+        >{{ t('income') }}</button>
       </div>
 
       <!-- List -->
@@ -83,7 +84,7 @@ const deleteCategory = async (id) => {
           <div class="cat-info">
             <span class="cat-icon" :style="{ backgroundColor: cat.color + '33' }">{{ cat.icon }}</span>
             <span class="cat-name">{{ cat.name }}</span>
-            <span v-if="cat.is_default" class="badge">預設</span>
+            <span v-if="cat.is_default" class="badge">{{ t('default') }}</span>
           </div>
           <button @click="deleteCategory(cat.id)" class="btn-del">🗑️</button>
         </div>
@@ -91,7 +92,7 @@ const deleteCategory = async (id) => {
 
       <!-- Add Form -->
       <div class="add-form">
-        <h4>新增分類</h4>
+        <h4>{{ t('add_category') }}</h4>
         <div class="form-row">
           <div class="icon-selector">
             <span class="current-icon">{{ newCat.icon }}</span>
@@ -100,12 +101,12 @@ const deleteCategory = async (id) => {
             </div>
           </div>
           <div class="inputs">
-            <input v-model="newCat.name" placeholder="分類名稱" maxlength="10" />
+            <input v-model="newCat.name" :placeholder="t('category_name_ph')" maxlength="10" />
             <div class="color-picker-row">
-              <label>顏色</label>
+              <label>{{ t('color') }}</label>
               <input v-model="newCat.color" type="color" />
             </div>
-            <button @click="addCategory" class="btn-add">新增</button>
+            <button @click="addCategory" class="btn-add">{{ t('submit') }}</button>
           </div>
         </div>
       </div>
