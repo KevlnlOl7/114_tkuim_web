@@ -880,6 +880,8 @@ def get_budget():
 # [預算] 設定
 @app.post("/api/budget")
 def set_budget(budget: BudgetSetting):
+    if budget.limit < 0:
+        raise HTTPException(status_code=400, detail="預算不能為負數")
     settings_collection.update_one(
         {"_id": "monthly_budget"},
         {"$set": {"limit": budget.limit}},
@@ -901,6 +903,38 @@ def export_excel(current_user: dict = Depends(get_current_user)):
     cols = ["date", "type", "category", "title", "amount", "payment_method"]
     df = df[[c for c in cols if c in df.columns]]
     filename = "PyMoney_Export.xlsx"
+    df.to_excel(filename, index=False)
+    return FileResponse(
+        filename, 
+        filename=filename, 
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+@app.get("/api/import/sample")
+def get_import_sample():
+    """提供匯入範例檔案下載"""
+    data = [
+        {
+            "date": "2024-01-01",
+            "type": "expense",
+            "category": "Food",
+            "title": "Lunch",
+            "amount": 100,
+            "payment_method": "Cash",
+            "note": "Example transaction"
+        },
+        {
+            "date": "2024-01-02",
+            "type": "income",
+            "category": "Salary",
+            "title": "Part-time",
+            "amount": 5000,
+            "payment_method": "Bank",
+            "note": "Monthly income"
+        }
+    ]
+    df = pd.DataFrame(data)
+    filename = "PyMoney_Import_Sample.xlsx"
     df.to_excel(filename, index=False)
     return FileResponse(
         filename, 

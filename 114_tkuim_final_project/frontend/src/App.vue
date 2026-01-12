@@ -312,6 +312,10 @@ const saveBudget = async (amount) => {
 
 // --- Import/Export ---
 const exportExcel = async () => { 
+  if (transactions.value.length < 1) {
+    alert(t('no_data_to_export') || '無資料可匯出，請先新增交易紀錄')
+    return
+  }
   try {
     const res = await axios.get('http://127.0.0.1:8000/api/export', {
       responseType: 'blob'
@@ -327,6 +331,24 @@ const exportExcel = async () => {
     window.URL.revokeObjectURL(url)
   } catch (error) {
     alert('匯出失敗：' + (error.response?.data?.detail || error.message))
+  }
+}
+
+const downloadSample = async () => {
+  try {
+    const res = await axios.get('http://127.0.0.1:8000/api/import/sample', {
+      responseType: 'blob'
+    })
+    const url = window.URL.createObjectURL(new Blob([res.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'PyMoney_Import_Sample.xlsx')
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    alert('下載範例失敗：' + (error.response?.data?.detail || error.message))
   }
 }
 
@@ -829,6 +851,7 @@ onMounted(() => {
         @update-budget="saveBudget"
         @import="handleImport"
         @export="exportExcel"
+        @download-sample="downloadSample"
       />
 
       <!-- Quick Entry Templates -->

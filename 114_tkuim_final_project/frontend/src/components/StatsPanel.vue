@@ -13,7 +13,7 @@ const props = defineProps({
   categories: { type: Array, default: () => [] }
 })
 
-const emit = defineEmits(['update-budget', 'import', 'export'])
+const emit = defineEmits(['update-budget', 'import', 'export', 'download-sample'])
 
 const showBudgetInput = ref(false)
 const newBudget = ref(0)
@@ -35,6 +35,10 @@ const toggleBudgetEdit = () => {
 }
 
 const saveBudget = () => {
+  if (Number(newBudget.value) < 0) {
+    alert(t('budget_negative_error') || '預算不能為負數')
+    return
+  }
   emit('update-budget', Number(newBudget.value))
   showBudgetInput.value = false
 }
@@ -83,6 +87,7 @@ const handleImport = (event) => {
       <div class="button-group">
         <input type="file" ref="fileInput" @change="handleImport" accept=".xlsx,.xls,.csv" style="display: none" />
         <button @click="triggerFileInput" class="btn-outline">{{ t('import_data') }}</button>
+        <button @click="$emit('download-sample')" class="btn-outline sample-btn" title="下載匯入範例格式">⬇️ 範例</button>
         <button @click="$emit('export')" class="btn-outline">{{ t('export_excel') }}</button>
       </div>
     </div>
