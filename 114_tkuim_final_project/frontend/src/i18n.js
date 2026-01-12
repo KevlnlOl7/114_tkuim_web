@@ -92,7 +92,8 @@ const messages = {
         load_users_failed: '載入使用者失敗', reset_failed: '重設失敗',
         change_password: '修改密碼', old_password_ph: '請輸入原密碼',
         new_password_ph: '請輸入新密碼', confirm_password_ph: '確認新密碼',
-        password_changed: '密碼已成功修改', old_password_wrong: '原密碼錯誤'
+        password_changed: '密碼已成功修改', old_password_wrong: '原密碼錯誤',
+        budget_negative_error: '預算不能為負數', no_data_to_export: '無資料可匯出，請先新增交易紀錄'
     },
     'en-US': {
         item_desc: 'Title', amount: 'Amount', date: 'Date', category: 'Category',
@@ -182,7 +183,8 @@ const messages = {
         load_users_failed: 'Load users failed', reset_failed: 'Reset failed',
         change_password: 'Change Password', old_password_ph: 'Old Password',
         new_password_ph: 'New Password', confirm_password_ph: 'Confirm Password',
-        password_changed: 'Password changed successfully', old_password_wrong: 'Old password is correct'
+        password_changed: 'Password changed successfully', old_password_wrong: 'Old password is correct',
+        budget_negative_error: 'Budget cannot be negative', no_data_to_export: 'No data to export, please add transactions first'
     },
     'vi': {
         item_desc: 'Tiêu đề', amount: 'Số tiền', date: 'Ngày', category: 'Danh mục',

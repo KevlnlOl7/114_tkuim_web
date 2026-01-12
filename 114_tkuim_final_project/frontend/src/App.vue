@@ -313,7 +313,9 @@ const saveBudget = async (amount) => {
 // --- Import/Export ---
 const exportExcel = async () => { 
   if (transactions.value.length < 1) {
-    alert(t('no_data_to_export') || '無資料可匯出，請先新增交易紀錄')
+    const msg = t('no_data_to_export') || '無資料可匯出，請先新增交易紀錄'
+    console.log('Export check failed:', msg)
+    alert(msg)
     return
   }
   try {
@@ -337,12 +339,13 @@ const exportExcel = async () => {
 const downloadSample = async () => {
   try {
     const res = await axios.get('http://127.0.0.1:8000/api/import/sample', {
+      params: { format: 'csv' },
       responseType: 'blob'
     })
     const url = window.URL.createObjectURL(new Blob([res.data]))
     const link = document.createElement('a')
     link.href = url
-    link.setAttribute('download', 'PyMoney_Import_Sample.xlsx')
+    link.setAttribute('download', 'PyMoney_Import_Sample.csv')
     document.body.appendChild(link)
     link.click()
     link.remove()

@@ -911,8 +911,8 @@ def export_excel(current_user: dict = Depends(get_current_user)):
     )
 
 @app.get("/api/import/sample")
-def get_import_sample():
-    """提供匯入範例檔案下載"""
+def get_import_sample(format: str = "csv"):
+    """提供匯入範例檔案下載，預設 CSV"""
     data = [
         {
             "date": "2024-01-01",
@@ -934,13 +934,23 @@ def get_import_sample():
         }
     ]
     df = pd.DataFrame(data)
-    filename = "PyMoney_Import_Sample.xlsx"
-    df.to_excel(filename, index=False)
-    return FileResponse(
-        filename, 
-        filename=filename,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    
+    if format == "csv":
+        filename = "PyMoney_Import_Sample.csv"
+        df.to_csv(filename, index=False, encoding="utf-8-sig")
+        return FileResponse(
+            filename, 
+            filename=filename,
+            media_type="text/csv"
+        )
+    else:
+        filename = "PyMoney_Import_Sample.xlsx"
+        df.to_excel(filename, index=False)
+        return FileResponse(
+            filename, 
+            filename=filename,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
 # [匯入] Excel/CSV (新功能!)
 @app.post("/api/import")

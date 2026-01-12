@@ -1,0 +1,3 @@
+﻿date,type,category,title,amount,payment_method,note
+2024-01-01,expense,Food,Lunch,100,Cash,Example transaction
+2024-01-02,income,Salary,Part-time,5000,Bank,Monthly income

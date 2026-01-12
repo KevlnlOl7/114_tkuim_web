@@ -36,7 +36,9 @@ const toggleBudgetEdit = () => {
 
 const saveBudget = () => {
   if (Number(newBudget.value) < 0) {
-    alert(t('budget_negative_error') || '預算不能為負數')
+    const msg = t('budget_negative_error') || '預算不能為負數'
+    console.log('Budget validation failed:', msg)
+    alert(msg)
     return
   }
   emit('update-budget', Number(newBudget.value))
