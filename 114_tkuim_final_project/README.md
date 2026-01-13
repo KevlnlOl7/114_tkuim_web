@@ -1,4 +1,4 @@
-# 💰 PyMoney - 智能家庭記帳系統
+# 💰 PyMoney - 智慧家庭記帳系統
 
 <div align="center">
 
@@ -7,7 +7,7 @@
 ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
-**一款支援多幣別、家庭共享、智能分析的全功能記帳 Web 應用程式**
+**一款支援多幣別、家庭共享、智慧分析的全功能記帳 Web 應用程式**
 
 [功能特色](#-功能特色) • [快速開始](#-快速開始) • [技術架構](#-技術架構) • [API 文件](#-api-文件)
 
@@ -33,7 +33,7 @@
 - **成員管理** - 管理員可移除成員
 - **共享帳本** - 查看全家庭交易記錄
 
-### 📊 智能分析
+### 📊 智慧分析
 - **圓餅圖** - 支出分類佔比視覺化
 - **趨勢圖** - 月度收支趨勢分析
 - **預算追蹤** - 總預算與分類預算監控
