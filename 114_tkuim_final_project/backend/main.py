@@ -101,6 +101,7 @@ templates_collection = db["templates"]
 recurring_collection = db["recurring"]
 category_budgets_collection = db["category_budgets"]
 payment_methods_collection = db["payment_methods"]
+ledgers_collection = db["ledgers"]
 
 # --- 密碼加密 ---
 # --- 密碼加密 (Salted SHA256) ---
@@ -173,6 +174,7 @@ class Transaction(BaseModel):
     currency: str = "TWD"
     foreign_amount: Optional[float] = None
     exchange_rate: Optional[float] = None
+    ledger_id: Optional[str] = None  # 帳本 ID
 
 class Category(BaseModel):
     name: str
@@ -398,12 +400,15 @@ def self_register(request: RegisterRequest):
     if users_collection.find_one({"username": request.username}):
         raise HTTPException(status_code=400, detail="使用者名稱已存在")
     
+    if users_collection.find_one({"email": request.email}):
+        raise HTTPException(status_code=400, detail="此 Email 已被註冊")
+    
     new_user = {
         "username": request.username,
         "password": hash_password(request.password),
         "display_name": request.display_name,
         "email": request.email,
-        "role": "user",  # Always user for self-registration (security fix)
+        "role": request.role if request.role in ["user", "family_admin"] else "user",
         "family_id": None,
         "invite_code": None,
         "invite_expires": None,
@@ -450,6 +455,16 @@ def reset_password_with_token(request: ResetWithTokenRequest):
         if datetime.now() > expires:
             raise HTTPException(status_code=400, detail="重設連結已過期，請重新申請")
     
+    # Password strength validation
+    if len(request.new_password) < 8:
+        raise HTTPException(status_code=400, detail="密碼長度至少需要 8 個字元")
+    if not re.search(r'[A-Z]', request.new_password):
+        raise HTTPException(status_code=400, detail="密碼必須包含大寫字母")
+    if not re.search(r'[a-z]', request.new_password):
+        raise HTTPException(status_code=400, detail="密碼必須包含小寫字母")
+    if not re.search(r'[0-9]', request.new_password):
+        raise HTTPException(status_code=400, detail="密碼必須包含數字")
+    
     # 更新密碼並清除 token
     users_collection.update_one(
         {"_id": user["_id"]},
@@ -463,69 +478,65 @@ def reset_password_with_token(request: ResetWithTokenRequest):
     return {"message": "密碼已重設成功，請使用新密碼登入"}
 
 # [Invite] 產生邀請碼
-@app.post("/api/invite/generate")
-def create_invite_code(user_id: str):
-    user = users_collection.find_one({"_id": ObjectId(user_id)})
-    if not user:
-        raise HTTPException(status_code=404, detail="使用者不存在")
+# [Invite] 產生帳本邀請碼 (綁定特定帳本)
+@app.post("/api/ledgers/{ledger_id}/invite")
+def create_ledger_invite(ledger_id: str, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
     
+    ledger = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+    if not ledger:
+        raise HTTPException(status_code=404, detail="帳本不存在")
+    
+    # Check if user is owner or member (Members can invite too? Let's allow members to invite for now)
+    # Actually usually only owners or admins invite. Let's restrict to owner for V1?
+    # User requested "Share Ledger", implies owner sharing.
+    # But later "Manage Members". Let's allow owner only for now to be safe.
+    if ledger.get("owner_id") != user_id:
+         # If strict: raise HTTPException(status_code=403, detail="只有擁有者可以邀請成員")
+         # If loose (like family): allow members. 
+         # Let's stick to Owner only for control.
+         raise HTTPException(status_code=403, detail="只有帳本擁有者可以產生邀請碼")
+
     code = generate_invite_code()
-    expires = datetime.now() + timedelta(minutes=10)
+    expires = datetime.now() + timedelta(minutes=30) # 30 mins expiry
     
-    users_collection.update_one(
-        {"_id": ObjectId(user_id)},
+    ledgers_collection.update_one(
+        {"_id": ObjectId(ledger_id)},
         {"$set": {"invite_code": code, "invite_expires": expires.isoformat()}}
     )
     
     return {"code": code, "expires_at": expires.isoformat()}
 
-# [Invite] 管理員接受邀請碼
+# [Invite] 邀請人接受邀請碼 (將對方加入自己的家庭)
+# [Invite] 接受帳本邀請碼
 @app.post("/api/invite/accept")
-def accept_invite(admin_id: str, request: InviteCodeRequest):
-    # 找到有這個邀請碼的使用者
-    user = users_collection.find_one({"invite_code": request.code})
-    if not user:
-        raise HTTPException(status_code=404, detail="邀請碼無效")
+def accept_invite(request: InviteCodeRequest, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    code = request.code.upper().strip()
     
-    # 檢查是否過期
-    if user.get("invite_expires"):
-        expires = datetime.fromisoformat(user["invite_expires"])
+    # Find ledger with this code
+    ledger = ledgers_collection.find_one({"invite_code": code})
+    if not ledger:
+        raise HTTPException(status_code=404, detail="邀請碼無效或已過期")
+        
+    # Check expiry
+    if ledger.get("invite_expires"):
+        expires = datetime.fromisoformat(ledger["invite_expires"])
         if datetime.now() > expires:
             raise HTTPException(status_code=400, detail="邀請碼已過期")
-    
-    # 取得管理員的家庭 (如果沒有就建立)
-    admin = users_collection.find_one({"_id": ObjectId(admin_id)})
-    if not admin:
-        raise HTTPException(status_code=404, detail="管理員不存在")
-    
-    family_id = admin.get("family_id")
-    if not family_id:
-        # 建立新家庭
-        family = {
-            "name": f"{admin['display_name']} 的家庭",
-            "admin_id": admin_id,
-            "members": [admin_id],
-            "created_at": datetime.now().isoformat()
-        }
-        result = families_collection.insert_one(family)
-        family_id = str(result.inserted_id)
-        users_collection.update_one(
-            {"_id": ObjectId(admin_id)},
-            {"$set": {"family_id": family_id}}
-        )
-    
-    # 將使用者加入家庭
-    user_id = str(user["_id"])
-    families_collection.update_one(
-        {"_id": ObjectId(family_id)},
+            
+    # Check if already member
+    members = ledger.get("members", [])
+    if user_id in members:
+         return {"message": "您已經是此帳本的成員了", "ledger_id": str(ledger["_id"])}
+
+    # Add user to ledger
+    ledgers_collection.update_one(
+        {"_id": ledger["_id"]},
         {"$addToSet": {"members": user_id}}
     )
-    users_collection.update_one(
-        {"_id": user["_id"]},
-        {"$set": {"family_id": family_id, "invite_code": None, "invite_expires": None}}
-    )
     
-    return {"message": f"已將 {user['display_name']} 加入家庭", "user_id": user_id}
+    return {"message": f"成功加入帳本「{ledger['name']}」！", "ledger_id": str(ledger["_id"])}
 
 # [Family] 取得家庭成員
 @app.get("/api/family/members/{family_id}")
@@ -579,6 +590,211 @@ def leave_family(user_id: str):
     
     return {"message": "已離開家庭"}
 
+# [Family] 更改家庭名稱
+class RenameFamilyRequest(BaseModel):
+    new_name: str
+
+@app.put("/api/family/rename")
+def rename_family(request: RenameFamilyRequest, current_user: dict = Depends(get_current_user)):
+    # Everyone in the family can rename (per user request)
+    # Removed strict role check
+    
+    family_id = current_user.get("family_id")
+    if not family_id:
+        raise HTTPException(status_code=400, detail="你尚未建立或加入家庭")
+    
+    # Validate name
+    if not request.new_name or len(request.new_name.strip()) < 1:
+        raise HTTPException(status_code=400, detail="請輸入有效的家庭名稱")
+    
+    if len(request.new_name) > 50:
+        raise HTTPException(status_code=400, detail="家庭名稱不能超過 50 個字元")
+    
+    # Update family name
+    families_collection.update_one(
+        {"_id": ObjectId(family_id)},
+        {"$set": {"name": request.new_name.strip()}}
+    )
+    
+    return {"message": "家庭名稱已更新", "new_name": request.new_name.strip()}
+
+# ==================== LEDGERS ====================
+
+# [Ledger] 建立帳本
+class CreateLedgerRequest(BaseModel):
+    name: str
+    type: str = "personal"  # "personal" or "shared"
+
+@app.post("/api/ledgers")
+def create_ledger(request: CreateLedgerRequest, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    
+    if not request.name or len(request.name.strip()) < 1:
+        raise HTTPException(status_code=400, detail="請輸入帳本名稱")
+    
+    if len(request.name) > 50:
+        raise HTTPException(status_code=400, detail="帳本名稱不能超過 50 個字元")
+    
+    # Check for duplicate ledger name for this user
+    existing = ledgers_collection.find_one({
+        "name": request.name.strip(),
+        "owner_id": user_id
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="帳本名稱已存在，請使用不同的名稱")
+    
+    ledger = {
+        "name": request.name.strip(),
+        "type": request.type,
+        "owner_id": user_id,
+        "members": [user_id],  # Init with owner as member
+        "created_at": datetime.now().isoformat()
+    }
+    
+    result = ledgers_collection.insert_one(ledger)
+    
+    return {"message": "帳本已建立", "id": str(result.inserted_id), "name": request.name.strip()}
+
+# [Ledger] 取得使用者的所有帳本
+@app.get("/api/ledgers")
+def get_ledgers(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    
+    # Get ledgers where user is owner or member
+    # Logic: Owner ID Match OR User ID in Members List
+    ledgers = list(ledgers_collection.find({
+        "$or": [
+            {"owner_id": user_id},
+            {"members": user_id}
+        ]
+    }))
+    
+    return [{
+        "id": str(l["_id"]),
+        "name": l["name"],
+        "type": l.get("type", "personal"),
+        "owner_id": l.get("owner_id"),
+        "members": l.get("members", []),
+        "is_owner": l.get("owner_id") == user_id,
+        "created_at": l.get("created_at", "")
+    } for l in ledgers]
+
+# [Ledger] 更新帳本名稱
+class UpdateLedgerRequest(BaseModel):
+    name: str
+
+@app.put("/api/ledgers/{ledger_id}")
+def update_ledger(ledger_id: str, request: UpdateLedgerRequest, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    
+    ledger = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+    if not ledger:
+        raise HTTPException(status_code=404, detail="帳本不存在")
+    
+    # Only owner can rename
+    if ledger.get("owner_id") != user_id:
+        raise HTTPException(status_code=403, detail="只有帳本擁有者可以修改名稱")
+    
+    if not request.name or len(request.name.strip()) < 1:
+        raise HTTPException(status_code=400, detail="請輸入帳本名稱")
+    
+    # Check for duplicate ledger name (excluding current ledger)
+    existing = ledgers_collection.find_one({
+        "name": request.name.strip(),
+        "owner_id": user_id,
+        "_id": {"$ne": ObjectId(ledger_id)}
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="帳本名稱已存在，請使用不同的名稱")
+    
+    ledgers_collection.update_one(
+        {"_id": ObjectId(ledger_id)},
+        {"$set": {"name": request.name.strip()}}
+    )
+    
+    return {"message": "帳本名稱已更新", "new_name": request.name.strip()}
+
+# [Ledger] 刪除帳本
+@app.delete("/api/ledgers/{ledger_id}")
+def delete_ledger(ledger_id: str, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    
+    ledger = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+    if not ledger:
+        raise HTTPException(status_code=404, detail="帳本不存在")
+    
+    # Only owner can delete
+    if ledger.get("owner_id") != user_id:
+        raise HTTPException(status_code=403, detail="只有帳本擁有者可以刪除")
+    
+    # Check if there are transactions in this ledger
+    tx_count = collection.count_documents({"ledger_id": ledger_id})
+    if tx_count > 0:
+        raise HTTPException(status_code=400, detail=f"此帳本還有 {tx_count} 筆交易，請先刪除或移動交易")
+    
+    ledgers_collection.delete_one({"_id": ObjectId(ledger_id)})
+    
+    return {"message": "帳本已刪除"}
+
+# [Ledger] 取得帳本成員
+@app.get("/api/ledgers/{ledger_id}/members")
+def get_ledger_members(ledger_id: str, current_user: dict = Depends(get_current_user)):
+    ledger = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+    if not ledger:
+        raise HTTPException(status_code=404, detail="帳本不存在")
+        
+    members = []
+    for member_id in ledger.get("members", []):
+         user = users_collection.find_one({"_id": ObjectId(member_id)})
+         if user:
+             members.append({
+                 "id": str(user["_id"]),
+                 "display_name": user["display_name"],
+                 "username": user["username"],
+                 "role": "owner" if member_id == ledger.get("owner_id") else "member"
+             })
+    
+    return {"members": members, "invite_code": ledger.get("invite_code")}
+
+# [Ledger] 移除成員
+@app.post("/api/ledgers/{ledger_id}/remove_member")
+def remove_ledger_member(ledger_id: str, member_id: str, current_user: dict = Depends(get_current_user)):
+    ledger = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+    if not ledger:
+        raise HTTPException(status_code=404, detail="帳本不存在")
+    
+    # Only owner can remove members
+    if ledger.get("owner_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="只有擁有者可以移除成員")
+        
+    if member_id == ledger.get("owner_id"):
+        raise HTTPException(status_code=400, detail="無法移除擁有者")
+        
+    ledgers_collection.update_one(
+        {"_id": ObjectId(ledger_id)},
+        {"$pull": {"members": member_id}}
+    )
+    
+    return {"message": "成員已移除"}
+
+# [Ledger] 離開帳本
+@app.post("/api/ledgers/{ledger_id}/leave")
+def leave_ledger(ledger_id: str, current_user: dict = Depends(get_current_user)):
+    ledger = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+    if not ledger:
+        raise HTTPException(status_code=404, detail="帳本不存在")
+
+    user_id = current_user["id"]
+    if user_id == ledger.get("owner_id"):
+        raise HTTPException(status_code=400, detail="擁有者無法離開帳本，請選擇刪除帳本")
+        
+    ledgers_collection.update_one(
+        {"_id": ObjectId(ledger_id)},
+        {"$pull": {"members": user_id}}
+    )
+    
+    return {"message": "已離開帳本"}
+
 # [Family] 管理員直接新增成員
 @app.post("/api/family/add-member")
 def direct_add_member(admin_id: str, member_id: str):
@@ -622,7 +838,7 @@ def direct_add_member(admin_id: str, member_id: str):
 @app.post("/api/family/remove-member")
 def remove_member(admin_id: str, member_id: str):
     admin = users_collection.find_one({"_id": ObjectId(admin_id)})
-    if not admin or admin.get("role") != "admin":
+    if not admin or admin.get("role") not in ["admin", "family_admin"]:
         raise HTTPException(status_code=403, detail="權限不足")
     
     family_id = admin.get("family_id")
@@ -683,6 +899,37 @@ def get_user(id: str, current_user: dict = Depends(get_current_user)):
         "family_id": user.get("family_id")
     }
 
+    return {
+        "id": str(user["_id"]),
+        "username": user["username"],
+        "display_name": user["display_name"],
+        "role": user["role"],
+        "family_id": user.get("family_id")
+    }
+
+# [Users] 更新個人資料 (顯示名稱)
+class UpdateProfileRequest(BaseModel):
+    display_name: str
+
+@app.put("/api/users/profile")
+def update_profile(request: UpdateProfileRequest, current_user: dict = Depends(get_current_user)):
+    # Admin cannot rename (per user request: "Except admin")
+    if current_user["username"] == "admin": 
+         raise HTTPException(status_code=403, detail="管理員名稱無法修改")
+
+    if not request.display_name or len(request.display_name.strip()) < 1:
+        raise HTTPException(status_code=400, detail="請輸入有效的顯示名稱")
+    
+    if len(request.display_name) > 20:
+        raise HTTPException(status_code=400, detail="顯示名稱不能超過 20 個字元")
+
+    users_collection.update_one(
+        {"_id": ObjectId(current_user["id"])},
+        {"$set": {"display_name": request.display_name.strip()}}
+    )
+    
+    return {"message": "個人資料已更新", "display_name": request.display_name.strip()}
+
 # [Users] 註冊新使用者 (管理員限定)
 @app.post("/api/users/register")
 def register_user(user: UserCreate, current_user: dict = Depends(get_current_user)):
@@ -724,13 +971,106 @@ def change_password(request: ChangePasswordRequest, current_user: dict = Depends
     )
     return {"message": "密碼修改成功"}
 
-# [Users] 刪除個人帳號 (僅限本人)
-@app.delete("/api/users/me")
-def delete_me(current_user: dict = Depends(get_current_user)):
+# [Users] 發送刪除帳號驗證碼
+class SendDeleteCodeRequest(BaseModel):
+    password: str
+
+@app.post("/api/users/send-delete-code")
+def send_delete_code(request: SendDeleteCodeRequest, current_user: dict = Depends(get_current_user)):
     user_id = current_user["id"]
     user = users_collection.find_one({"_id": ObjectId(user_id)})
-    if user and user.get("username") == "admin":
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="使用者不存在")
+    
+    if user.get("username") == "admin":
         raise HTTPException(status_code=400, detail="無法刪除預設管理員帳號")
+    
+    # Verify password
+    if not verify_password(request.password, user["password"]):
+        raise HTTPException(status_code=400, detail="密碼錯誤")
+    
+    # Check if user has email
+    if not user.get("email"):
+        raise HTTPException(status_code=400, detail="未設定 Email，無法發送驗證碼")
+    
+    # Generate 6-digit code
+    delete_code = ''.join(random.choices('0123456789', k=6))
+    expires = datetime.now() + timedelta(minutes=10)
+    
+    # Store code
+    users_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"delete_code": delete_code, "delete_code_expires": expires.isoformat()}}
+    )
+    
+    # Send email
+    smtp_email = os.getenv("SMTP_EMAIL")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = smtp_email
+        msg['To'] = user["email"]
+        msg['Subject'] = "⚠️ PyMoney 帳號刪除驗證碼"
+        
+        body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2>⚠️ 帳號刪除驗證</h2>
+            <p>您正在申請刪除 PyMoney 帳號。</p>
+            <p>您的驗證碼是：</p>
+            <div style="background: #fee2e2; color: #dc2626; padding: 20px; font-size: 32px; font-weight: bold; text-align: center; border-radius: 8px; margin: 20px 0;">
+                {delete_code}
+            </div>
+            <p style="color: #999; font-size: 12px;">此驗證碼將在 10 分鐘後失效。如果您沒有請求刪除帳號，請忽略此郵件。</p>
+        </body>
+        </html>
+        """
+        msg.attach(MIMEText(body, 'html'))
+        
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_email, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        
+        return {"message": "驗證碼已發送至您的信箱"}
+    except Exception as e:
+        print(f"Email 發送失敗: {e}")
+        raise HTTPException(status_code=500, detail="驗證碼發送失敗，請稍後再試")
+
+# [Users] 刪除個人帳號 (需驗證密碼+驗證碼)
+class DeleteAccountRequest(BaseModel):
+    password: str
+    delete_code: str
+
+@app.delete("/api/users/me")
+def delete_me(request: DeleteAccountRequest, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    user = users_collection.find_one({"_id": ObjectId(user_id)})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="使用者不存在")
+    
+    if user.get("username") == "admin":
+        raise HTTPException(status_code=400, detail="無法刪除預設管理員帳號")
+    
+    # Verify password
+    if not verify_password(request.password, user["password"]):
+        raise HTTPException(status_code=400, detail="密碼錯誤")
+    
+    # Verify delete code
+    if not user.get("delete_code") or user["delete_code"] != request.delete_code:
+        raise HTTPException(status_code=400, detail="驗證碼錯誤")
+    
+    # Check if code expired
+    if user.get("delete_code_expires"):
+        expires = datetime.fromisoformat(user["delete_code_expires"])
+        if datetime.now() > expires:
+            raise HTTPException(status_code=400, detail="驗證碼已過期，請重新發送")
     
     # 如果使用者在家庭中，先將其移出
     family_id = user.get("family_id")
@@ -751,6 +1091,7 @@ def get_transactions(
     end_date: Optional[str] = None,
     user_id: Optional[str] = None,
     user_ids: Optional[str] = None,
+    ledger_id: Optional[str] = None,  # 帳本篩選
     current_user: dict = Depends(get_current_user) # IDOR Protection
 ):
     query = {}
@@ -800,6 +1141,10 @@ def get_transactions(
         query["date"] = {"$gte": start_date}
     elif end_date:
         query["date"] = {"$lte": end_date}
+    
+    # 帳本篩選
+    if ledger_id and ledger_id != "all":
+        query["ledger_id"] = ledger_id
 
     data = collection.find(query).sort("date", -1)
     

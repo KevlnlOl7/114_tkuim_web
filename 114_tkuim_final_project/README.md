@@ -67,8 +67,16 @@ python -m venv venv
 pip install -r ../requirements.txt
 
 # 3. 環境變數 (複製並編輯 .env)
+# Windows:
+copy .env.example .env
+
+# macOS / Linux:
 cp .env.example .env
+
 # 編輯 .env 設定 MONGODB_URL 和 SECRET_KEY
+
+# 產生 SECRET_KEY (可以使用以下 Python 指令)
+python -c "import secrets; print(secrets.token_hex(32))"
 
 # 4. 啟動後端
 uvicorn main:app --reload
@@ -82,7 +90,7 @@ npm run dev
 ### 預設帳號
 | 角色 | 帳號 | 密碼 |
 |------|------|------|
-| 管理員 | `admin` | `Admin123` |
+| 管理員 | `admin` | `admin` |
 
 ---
 

@@ -16,6 +16,7 @@ import CategoryBudgetPanel from './components/CategoryBudgetPanel.vue'
 import RecurringManager from './components/RecurringManager.vue'
 import LanguageSelector from './components/LanguageSelector.vue'
 import { t, currentLocale, setLocale } from './i18n.js'
+import LedgerSettingsModal from './components/LedgerSettingsModal.vue'
 
 // --- Auth State ---
 const currentPage = ref('login')
@@ -24,6 +25,7 @@ const currentUser = ref(null)
 const showUserManager = ref(false)
 const showCategoryManager = ref(false)
 const showPaymentMethodManager = ref(false)
+const showLedgerSettingsModal = ref(false)
 
 // --- Data State ---
 const transactions = ref([])
@@ -83,19 +85,37 @@ const confirmNewPassword = ref('')
 const resetMessage = ref('')
 const resetLoading = ref(false)
 
-// --- Family/Invite State ---
-const showInviteModal = ref(false)
+// --- Family/Invite State (Deprecated / Removed) ---
+const showInviteModal = ref(false) // Leftover if needed for something else, but mostly unused now
 const inviteCode = ref('')
 const inviteExpires = ref('')
 const inviteLoading = ref(false)
 const showJoinModal = ref(false)
 const joinCode = ref('')
 const joinMessage = ref('')
-const familyMembers = ref([])
-const familyName = ref('')
-const familyAdminName = ref('') // Store admin name for i18n
-const selectedUserIds = ref([]) // Multi-select: array of user IDs
-let pollingInterval = null
+// const familyMembers = ref([]) -> Removed
+// const familyName = ref('') -> Removed
+const selectedUserIds = ref([]) // Still used for filtering by member
+
+// --- Rename User State ---
+const showRenameUserModal = ref(false)
+const newDisplayName = ref('')
+const renameUserLoading = ref(false)
+const renameUserMessage = ref('')
+
+// --- Rename Family State (Legacy - kept for template compatibility) ---
+const showRenameFamilyModal = ref(false)
+const newFamilyName = ref('')
+const renameFamilyLoading = ref(false)
+const renameFamilyMessage = ref('')
+
+// --- Ledger State ---
+const ledgers = ref([])
+const activeLedgerId = ref(localStorage.getItem('active_ledger_id') || 'all')
+const showCreateLedgerModal = ref(false)
+const newLedgerName = ref('')
+const newLedgerType = ref('personal')
+const createLedgerLoading = ref(false)
 
 // --- Toast Notification ---
 const toast = ref({ show: false, message: '', type: 'info' })
@@ -112,10 +132,8 @@ const checkLoginStatus = () => {
   const savedUser = localStorage.getItem('user')
   if (savedUser) {
     currentUser.value = JSON.parse(savedUser)
-    if (currentUser.value.token) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${currentUser.value.token}`
-    }
     currentPage.value = 'main'
+    fetchLedgers()
   }
 }
 
@@ -127,6 +145,7 @@ const handleLoginSuccess = (user) => {
   }
   currentPage.value = 'main'
   fetchData()
+  fetchLedgers()
 }
 
 const handleLogout = () => {
@@ -171,6 +190,12 @@ const getFilterQuery = () => {
   } else if (currentUser.value) {
     query += `&user_id=${currentUser.value.id}`
   }
+  
+  // 帳本篩選
+  if (activeLedgerId.value && activeLedgerId.value !== 'all') {
+    query += `&ledger_id=${activeLedgerId.value}`
+  }
+  
   return query
 }
 
@@ -224,7 +249,8 @@ const handleSubmit = async () => {
     amount: Number(form.value.amount),
     foreign_amount: form.value.foreign_amount ? Number(form.value.foreign_amount) : null,
     exchange_rate: form.value.exchange_rate ? Number(form.value.exchange_rate) : null,
-    target_account: form.value.target_account || null
+    target_account: form.value.target_account || null,
+    ledger_id: activeLedgerId.value !== 'all' ? activeLedgerId.value : null
   }
   try {
     if (isEditing.value) {
@@ -407,16 +433,8 @@ const totalAmount = computed(() => {
   }, 0)
 })
 
-const displayFamilyName = computed(() => {
-  if (!familyName.value) return t('family_book')
-  
-  if (familyAdminName.value) {
-    if (familyName.value.includes(familyAdminName.value)) {
-       return t('users_family', { name: familyAdminName.value })
-    }
-  }
-  return familyName.value
-})
+// Filter Logic (Modified for Ledger)
+// ... keeping existing computed props ...
 
 const monthlyExpense = computed(() => {
   const now = new Date()
@@ -438,78 +456,22 @@ const monthlyBalance = computed(() => {
   return monthlyIncome.value - monthlyExpense.value
 })
 
-// --- Family Functions ---
-const generateInviteCode = async () => {
-  if (!currentUser.value) return
-  inviteLoading.value = true
-  try {
-    const res = await axios.post(`/api/invite/generate?user_id=${currentUser.value.id}`)
-    inviteCode.value = res.data.code
-    inviteExpires.value = res.data.expires_at
-    showInviteModal.value = true
-    startFamilyPolling()
-  } catch (err) {
-    showToast('產生邀請碼失敗', 'error')
-  } finally {
-    inviteLoading.value = false
-  }
-}
-
-const startFamilyPolling = () => {
-  pollingInterval = setInterval(async () => {
-    try {
-      const res = await axios.get(`/api/users/${currentUser.value.id}`)
-      if (res.data.family_id) {
-        currentUser.value.family_id = res.data.family_id
-        localStorage.setItem('user', JSON.stringify(currentUser.value))
-        showInviteModal.value = false
-        stopFamilyPolling()
-        fetchFamilyMembers()
-      }
-    } catch (err) {
-        // Silently fail polling check
-    }
-  }, 3000)
-}
-
-const stopFamilyPolling = () => {
-  if (pollingInterval) {
-    clearInterval(pollingInterval)
-    pollingInterval = null
-  }
-}
-
-const refreshUser = async () => {
-  if (!currentUser.value) return
-  try {
-    const res = await axios.get(`/api/users/${currentUser.value.id}`)
-    if (res.data) {
-      const oldFamilyId = currentUser.value.family_id
-      currentUser.value = { ...currentUser.value, ...res.data }
-      localStorage.setItem('user', JSON.stringify(currentUser.value))
-      
-      // If user joined or switched family, fetch members
-      if (currentUser.value.family_id) {
-        await fetchFamilyMembers()
-      } else {
-        familyMembers.value = []
-        familyName.value = ''
-      }
-    }
-  } catch (err) {
-    console.error('更新使用者資訊失敗', err)
-  }
-}
+// --- Family Functions (REMOVED) ---
+// ... family logic removed ...
 
 const acceptInviteCode = async () => {
   if (!currentUser.value || !joinCode.value) return
+  // This is now "Accept Ledger Invite"
   try {
     const res = await axios.post(
-      `/api/invite/accept?admin_id=${currentUser.value.id}`,
+      `/api/invite/accept`,
       { code: joinCode.value }
     )
     joinMessage.value = res.data.message
-    await fetchFamilyMembers()
+    await fetchLedgers() // Refresh ledgers list
+    if (res.data.ledger_id) {
+        selectLedger(res.data.ledger_id)
+    }
     setTimeout(() => {
       showJoinModal.value = false
       joinCode.value = ''
@@ -520,43 +482,10 @@ const acceptInviteCode = async () => {
   }
 }
 
-const fetchFamilyMembers = async () => {
-  if (!currentUser.value?.family_id) return
-  try {
-    const res = await axios.get(`/api/family/members/${currentUser.value.family_id}`)
-    familyMembers.value = res.data.members
-    familyName.value = res.data.family_name
-    familyAdminName.value = res.data.admin_name || ''
-  } catch (err) {
-    // No family members or not in family
-  }
-}
-
-const leaveFamily = async () => {
-  if (!confirm(t('leave_family_confirm') || 'Are you sure you want to leave this family?')) return
-  try {
-    await axios.post(`/api/family/leave?user_id=${currentUser.value.id}`)
-    showToast('已離開家庭', 'success')
-    currentUser.value.family_id = null
-    localStorage.setItem('user', JSON.stringify(currentUser.value))
-    familyMembers.value = []
-    familyName.value = ''
-    selectedUserIds.value = [] // Clear filter state
-  } catch (err) {
-    showToast(err.response?.data?.detail || '離開失敗', 'error')
-  }
-}
-
-const removeMember = async (memberId, memberName) => {
-  if (!confirm(t('confirm_remove_member', { name: memberName }))) return
-  try {
-    await axios.post(`/api/family/remove-member?admin_id=${currentUser.value.id}&member_id=${memberId}`)
-    showToast(`已將 ${memberName} 移出家庭`, 'success')
-    await fetchFamilyMembers()
-  } catch (err) {
-    showToast(err.response?.data?.detail || '移除失敗', 'error')
-  }
-}
+const activeLedger = computed(() => {
+    if (activeLedgerId.value === 'all') return {}
+    return ledgers.value.find(l => String(l.id) === String(activeLedgerId.value)) || {}
+})
 
 // --- Reset Password ---
 const handleResetPassword = async () => {
@@ -592,6 +521,112 @@ const handleResetPassword = async () => {
   } finally {
     resetLoading.value = false
   }
+}
+
+// --- Refresh User (from API) ---
+const refreshUser = async () => {
+  if (!currentUser.value?.id) return
+  try {
+    const res = await axios.get(`/api/users/${currentUser.value.id}`)
+    if (res.data) {
+      currentUser.value = { ...currentUser.value, ...res.data }
+      localStorage.setItem('user', JSON.stringify(currentUser.value))
+    }
+  } catch (err) {
+    console.error('Failed to refresh user:', err)
+  }
+}
+
+// --- Rename Family (Legacy - kept for template compatibility) ---
+const handleRenameFamily = async () => {
+  // This feature has been deprecated but the modal still exists in template
+  // Just close the modal if someone triggers it
+  renameFamilyMessage.value = '此功能已移除'
+  setTimeout(() => {
+    showRenameFamilyModal.value = false
+    renameFamilyMessage.value = ''
+  }, 1500)
+}
+
+// --- Rename User ---
+const openRenameUserModal = () => {
+  newDisplayName.value = currentUser.value.display_name
+  renameUserMessage.value = ''
+  showRenameUserModal.value = true
+}
+
+const handleRenameUser = async () => {
+  renameUserMessage.value = ''
+  
+  if (!newDisplayName.value.trim()) {
+    renameUserMessage.value = '❌ ' + (t('enter_valid_name') || '請輸入有效名稱')
+    return
+  }
+  
+  renameUserLoading.value = true
+  
+  try {
+    const res = await axios.put('/api/users/profile', {
+      display_name: newDisplayName.value.trim()
+    })
+    
+    // Update local state
+    currentUser.value.display_name = res.data.display_name
+    localStorage.setItem('user', JSON.stringify(currentUser.value))
+    
+    renameUserMessage.value = '✅ ' + (t('update_success') || '更新成功')
+    setTimeout(() => {
+      showRenameUserModal.value = false
+      renameUserMessage.value = ''
+    }, 1500)
+  } catch (err) {
+    renameUserMessage.value = '❌ ' + (err.response?.data?.detail || t('op_failed'))
+  } finally {
+    renameUserLoading.value = false
+  }
+}
+
+// --- Ledger Functions ---
+const fetchLedgers = async () => {
+  try {
+    const res = await axios.get('/api/ledgers')
+    ledgers.value = res.data
+  } catch (err) {
+    console.error('Error fetching ledgers:', err)
+  }
+}
+
+const createLedger = async () => {
+  if (!newLedgerName.value.trim()) return
+  
+  createLedgerLoading.value = true
+  try {
+    const res = await axios.post('/api/ledgers', {
+      name: newLedgerName.value.trim(),
+      type: 'shared' // Always shared now? Or personal? Actually shared capability is default.
+    })
+    showCreateLedgerModal.value = false
+    newLedgerName.value = ''
+    newLedgerType.value = 'personal'
+    await fetchLedgers()
+    
+    // Auto-select the new ledger if it's the first one or user explicitly created it
+    if (res.data && res.data.id) {
+       selectLedger(res.data.id)
+    }
+    
+    showToast(t('create_success') || '帳本已建立', 'success')
+  } catch (err) {
+    showToast(err.response?.data?.detail || t('op_failed'), 'error')
+  } finally {
+    createLedgerLoading.value = false
+  }
+}
+
+const selectLedger = (ledgerId) => {
+  activeLedgerId.value = ledgerId
+  localStorage.setItem('active_ledger_id', ledgerId)
+  fetchData()
 }
 
 // --- Watchers ---
@@ -643,6 +678,86 @@ const handleUpdatePassword = async () => {
   }
 }
 
+// --- Delete Account Logic (GitHub-style with password + email code) ---
+const showDeleteAccountModal = ref(false)
+const deleteConfirmUsername = ref('')
+const deletePassword = ref('')
+const deleteVerificationCode = ref('')
+const deleteLoading = ref(false)
+const deleteSendingCode = ref(false)
+const deleteMessage = ref('')
+const deleteCodeSent = ref(false)
+
+const sendDeleteCode = async () => {
+  deleteMessage.value = ''
+  
+  if (!deletePassword.value) {
+    deleteMessage.value = '❌ ' + t('enter_password')
+    return
+  }
+  
+  deleteSendingCode.value = true
+  
+  try {
+    await axios.post('/api/users/send-delete-code', {
+      password: deletePassword.value
+    })
+    deleteMessage.value = '✅ ' + t('code_sent')
+    deleteCodeSent.value = true
+  } catch (err) {
+    deleteMessage.value = '❌ ' + (err.response?.data?.detail || t('op_failed'))
+  } finally {
+    deleteSendingCode.value = false
+  }
+}
+
+const handleDeleteAccount = async () => {
+  deleteMessage.value = ''
+  
+  if (deleteConfirmUsername.value !== currentUser.value?.username) {
+    deleteMessage.value = '❌ ' + t('username_mismatch')
+    return
+  }
+  
+  if (!deletePassword.value) {
+    deleteMessage.value = '❌ ' + t('enter_password')
+    return
+  }
+  
+  if (!deleteVerificationCode.value) {
+    deleteMessage.value = '❌ ' + t('enter_verification_code')
+    return
+  }
+  
+  deleteLoading.value = true
+  
+  try {
+    await axios.delete('/api/users/me', {
+      data: {
+        password: deletePassword.value,
+        delete_code: deleteVerificationCode.value
+      }
+    })
+    deleteMessage.value = '✅ ' + t('account_deleted')
+    setTimeout(() => {
+      handleLogout()
+    }, 1500)
+  } catch (err) {
+    deleteMessage.value = '❌ ' + (err.response?.data?.detail || t('op_failed'))
+  } finally {
+    deleteLoading.value = false
+  }
+}
+
+const resetDeleteModal = () => {
+  showDeleteAccountModal.value = false
+  deleteConfirmUsername.value = ''
+  deletePassword.value = ''
+  deleteVerificationCode.value = ''
+  deleteMessage.value = ''
+  deleteCodeSent.value = false
+}
+
 // --- Lifecycle ---
 onMounted(() => {
   const urlParams = new URLSearchParams(window.location.search)
@@ -658,37 +773,22 @@ onMounted(() => {
   if (isLoggedIn.value) {
     refreshUser()
     fetchData()
-    if (currentUser.value?.family_id) {
-      fetchFamilyMembers()
-    }
-    
-    // 定期檢查使用者狀態（每 30 秒），偵測是否被移出家庭
+    // if (currentUser.value?.family_id) { fetchFamilyMembers() } -> Removed
+
+    // Sync user state periodically (keep alive / sync name changes)
     setInterval(async () => {
       if (currentUser.value && isLoggedIn.value) {
         try {
           const res = await axios.get(`/api/users/${currentUser.value.id}`)
           if (res.data) {
-            const oldFamilyId = currentUser.value.family_id
-            const newFamilyId = res.data.family_id
-            
-            // 如果家庭狀態有變化
-            if (oldFamilyId !== newFamilyId) {
               currentUser.value = { ...currentUser.value, ...res.data }
               localStorage.setItem('user', JSON.stringify(currentUser.value))
-              
-              if (newFamilyId) {
-                await fetchFamilyMembers()
-              } else {
-                familyMembers.value = []
-                familyName.value = ''
-              }
-            }
           }
         } catch (err) {
-          // 靜默失敗，避免干擾用戶
+          // Silent fail
         }
       }
-    }, 30000) // 每 30 秒檢查一次
+    }, 30000)
   }
 })
 </script>
@@ -722,7 +822,7 @@ onMounted(() => {
   </div>
   
   <!-- 主頁面 -->
-  <div v-else-if="currentPage === 'main'" class="app-background">
+  <div v-if="currentPage === 'main'" class="app-background">
     <!-- Loading Overlay -->
     <div v-if="isLoading" class="loading-overlay">
       <div class="loading-spinner"></div>
@@ -742,18 +842,32 @@ onMounted(() => {
           <h1 class="app-title">💰 {{ t('app_title') }}</h1>
           <span v-if="currentUser" class="user-info">
             👋 {{ currentUser.display_name }}
+            <button v-if="currentUser.username !== 'admin'" @click="openRenameUserModal" class="btn-edit-user" :title="t('edit_name')">✏️</button>
             <span v-if="currentUser.role === 'admin'" class="admin-badge">{{ t('admin') }}</span>
+            <span v-else-if="currentUser.role === 'family_admin'" class="admin-badge family-admin-badge">{{ t('family_admin') }}</span>
           </span>
+          
+          <!-- Ledger Switcher -->
+          <div class="ledger-switcher">
+            <span class="ledger-icon">📚</span>
+            <select v-if="ledgers.length > 0" v-model="activeLedgerId" @change="selectLedger(activeLedgerId)" class="ledger-select">
+              <option value="all">{{ t('all_ledgers') }}</option>
+              <option v-for="ledger in ledgers" :key="ledger.id" :value="ledger.id">
+                {{ ledger.name }}
+              </option>
+            </select>
+            <button v-if="activeLedgerId !== 'all'" @click="showLedgerSettingsModal = true" class="btn-settings" :title="t('ledger_settings')">⚙️</button>
+            <button @click="showCreateLedgerModal = true" class="btn-add-ledger" :title="t('new_ledger')">+</button>
+          </div>
         </div>
         <div class="header-actions">
           <LanguageSelector />
           <button @click="toggleTheme" class="btn-theme" :title="isDarkMode ? 'Light Mode' : 'Dark Mode'">{{ isDarkMode ? '☀️' : '🌙' }}</button>
-          <button v-if="currentUser" @click="showChangePasswordModal = true" class="btn-theme" title="修改密碼">🔑</button>
-          <button v-if="currentUser?.role === 'user'" @click="generateInviteCode" class="btn-invite" :disabled="inviteLoading">
-            {{ inviteLoading ? t('generating') : '🔗 ' + t('gen_invite_code') }}
-          </button>
-          <button v-if="currentUser?.role === 'admin'" @click="showJoinModal = true" class="btn-join">➕ {{ t('join_member') }}</button>
+          <button v-if="currentUser" @click="showChangePasswordModal = true" class="btn-theme" :title="t('change_password')">🔑</button>
+          
+          <button v-if="currentUser" @click="showJoinModal = true" class="btn-join">🔗 {{ t('join_ledger') }}</button>
           <button v-if="currentUser?.role === 'admin'" @click="showUserManager = true" class="btn-manage">👥 {{ t('manage') }}</button>
+          <button v-if="currentUser && currentUser.username !== 'admin'" @click="showDeleteAccountModal = true" class="btn-delete-account" :title="t('delete_account') || '刪除帳號'">🗑️</button>
           <button @click="handleLogout" class="btn-logout">🚪 {{ t('logout') }}</button>
         </div>
       </div>
@@ -765,14 +879,14 @@ onMounted(() => {
           <div class="invite-code-display">{{ inviteCode }}</div>
           <p class="invite-hint">{{ t('invite_code_hint') }}</p>
           <p class="invite-expires">⏰ {{ t('invite_expires_hint') }}</p>
-          <button @click="showInviteModal = false; stopFamilyPolling()" class="btn-modal-close">{{ t('close') }}</button>
+          <button @click="showInviteModal = false" class="btn-modal-close">{{ t('close') }}</button>
         </div>
       </div>
 
       <!-- 加入成員 Modal -->
     <div v-if="showJoinModal" class="modal-overlay" @click.self="showJoinModal = false">
       <div class="modal-card">
-        <h3>➕ {{ t('join_family_member') }}</h3>
+        <h3>🔗 {{ t('join_ledger') }}</h3>
         <input v-model="joinCode" type="text" :placeholder="t('enter_invite_code')" class="modal-input" />
         <p v-if="joinMessage" :class="joinMessage.includes('已將') ? 'success-msg' : 'error-msg'">{{ joinMessage }}</p>
         <div class="modal-actions">
@@ -801,6 +915,66 @@ onMounted(() => {
       </div>
     </div>
 
+    <!-- 刪除帳號 Modal (GitHub-style with password + email code) -->
+    <div v-if="showDeleteAccountModal" class="modal-overlay" @click.self="resetDeleteModal">
+      <div class="modal-card delete-modal">
+        <h3>⚠️ {{ t('delete_account_title') }}</h3>
+        <p class="delete-warning">{{ t('delete_warning') }}</p>
+        
+        <!-- Step 1: Username -->
+        <p class="delete-confirm-hint">{{ t('type_username_confirm') }} <strong>{{ currentUser?.username }}</strong></p>
+        <input 
+          v-model="deleteConfirmUsername" 
+          type="text" 
+          :placeholder="currentUser?.username"
+          class="modal-input delete-input" 
+          :disabled="deleteLoading"
+        />
+        
+        <!-- Step 2: Password + Send Code -->
+        <div class="delete-password-row">
+          <input 
+            v-model="deletePassword" 
+            type="password" 
+            :placeholder="t('enter_password')"
+            class="modal-input delete-input" 
+            :disabled="deleteLoading || deleteSendingCode"
+          />
+          <button 
+            @click="sendDeleteCode" 
+            class="btn-send-code"
+            :disabled="deleteSendingCode || !deletePassword || deleteCodeSent"
+          >
+            {{ deleteSendingCode ? t('sending_code') : (deleteCodeSent ? '✓' : t('send_verification_code')) }}
+          </button>
+        </div>
+        
+        <!-- Step 3: Verification Code (only after code sent) -->
+        <input 
+          v-if="deleteCodeSent"
+          v-model="deleteVerificationCode" 
+          type="text" 
+          :placeholder="t('enter_verification_code')"
+          class="modal-input delete-input" 
+          :disabled="deleteLoading"
+          maxlength="6"
+        />
+        
+        <p v-if="deleteMessage" :class="deleteMessage.includes('✅') ? 'success-msg' : 'error-msg'">{{ deleteMessage }}</p>
+        
+        <div class="modal-actions">
+          <button 
+            @click="handleDeleteAccount" 
+            class="btn-danger" 
+            :disabled="deleteLoading || deleteConfirmUsername !== currentUser?.username || !deletePassword || !deleteVerificationCode"
+          >
+            {{ deleteLoading ? '...' : t('confirm_delete_account') }}
+          </button>
+          <button @click="resetDeleteModal" class="btn-cancel">{{ t('cancel') }}</button>
+        </div>
+      </div>
+    </div>
+
       <!-- 使用者管理 Modal -->
       <div v-if="showUserManager" class="modal-overlay" @click.self="showUserManager = false">
         <UserManager 
@@ -809,173 +983,187 @@ onMounted(() => {
           @refresh-user="refreshUser"
         />
       </div>
-
-      <!-- 一般使用者：家庭狀態卡片 -->
-      <div v-if="currentUser?.role === 'user' && currentUser?.family_id" class="family-card user">
-        <div class="family-info">
-          <span class="family-icon">🏠</span>
-          <div class="family-text">
-            <span class="family-label">{{ t('joined_family') }}</span>
-            <span class="family-name">{{ displayFamilyName }}</span>
-          </div>
-        </div>
-        <!-- Monthly Stats Section -->
-        <div class="monthly-stats-mini">
-          <div class="stat-item income">
-            <span class="stat-label">{{ t('income') }}</span>
-            <span class="stat-value">+{{ monthlyIncome.toLocaleString() }}</span>
-          </div>
-          <div class="stat-item expense">
-            <span class="stat-label">{{ t('expense') }}</span>
-            <span class="stat-value">-{{ monthlyExpense.toLocaleString() }}</span>
-          </div>
-          <div class="stat-item balance" :class="{ positive: monthlyBalance >= 0, negative: monthlyBalance < 0 }">
-            <span class="stat-label">{{ t('balance') || '結餘' }}</span>
-            <span class="stat-value">{{ monthlyBalance >= 0 ? '+' : '' }}{{ monthlyBalance.toLocaleString() }}</span>
-          </div>
-        </div>
-        <button @click="leaveFamily" class="btn-leave">🚪 {{ t('leave') }}</button>
-      </div>
-
-      <!-- 管理員帳本選擇器 (多選 checkbox) -->
-      <div v-if="currentUser?.role === 'admin' && familyMembers.length > 0" class="family-card admin">
-        <div class="family-card-header">
-          <div class="family-info">
-            <span class="family-icon">👨‍👩‍👧</span>
-            <div class="family-text">
-              <span class="family-label">{{ t('family_mgmt') }}</span>
-              <span class="family-name">{{ displayFamilyName }}</span>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Multi-select filter -->
-        <div class="family-filter-section">
-          <label class="family-filter-label">📊 {{ t('filter_member_accounts') }}</label>
-          <div class="member-checkboxes">
-            <label class="member-checkbox-item select-all">
-              <input 
-                type="checkbox" 
-                :checked="selectedUserIds.length === 0"
-                @change="selectedUserIds = []"
-              />
-              <span>{{ t('all') }}</span>
-            </label>
-            <label 
-              v-for="member in familyMembers" 
-              :key="member.id" 
-              class="member-checkbox-item"
-              :class="{ selected: selectedUserIds.includes(member.id) }"
-            >
-              <input 
-                type="checkbox" 
-                :value="member.id"
-                v-model="selectedUserIds"
-              />
-              <span class="checkbox-avatar">{{ member.display_name.charAt(0) }}</span>
-              <span>{{ member.display_name }}</span>
-              <span v-if="member.role === 'admin'" class="checkbox-badge" :title="t('admin')">👑</span>
-            </label>
-          </div>
-        </div>
-        
-        <!-- Member management -->
-        <div class="family-members-list">
-          <div v-for="member in familyMembers" :key="member.id" class="member-chip">
-            <span class="member-avatar">{{ member.display_name.charAt(0) }}</span>
-            <span class="member-name">{{ member.display_name }}</span>
-            <span v-if="member.role === 'admin'" class="member-badge">👑</span>
-            <button v-if="member.id !== currentUser.id" @click="removeMember(member.id, member.display_name)" class="member-remove">×</button>
-          </div>
+    
+    <!-- 更改使用者名稱 Modal -->
+    <div v-if="showRenameUserModal" class="modal-overlay" @click.self="showRenameUserModal = false">
+      <div class="modal-card">
+        <h3>✏️ {{ t('edit_name') || '修改顯示名稱' }}</h3>
+        <input 
+          v-model="newDisplayName" 
+          type="text" 
+          :placeholder="t('enter_valid_name') || '輸入新的名稱'"
+          class="modal-input" 
+          :disabled="renameUserLoading"
+          maxlength="20"
+        />
+        <p v-if="renameUserMessage" :class="renameUserMessage.includes('✅') ? 'success-msg' : 'error-msg'">{{ renameUserMessage }}</p>
+        <div class="modal-actions">
+          <button @click="handleRenameUser" class="btn-confirm" :disabled="renameUserLoading || !newDisplayName.trim()">
+            {{ renameUserLoading ? '...' : t('save') }}
+          </button>
+          <button @click="showRenameUserModal = false" class="btn-cancel">{{ t('cancel') }}</button>
         </div>
       </div>
+    </div>
 
-      <!-- Assets Dashboard (New Phase 2) -->
-      <AssetsDashboard 
-        v-if="currentUser" 
-        :currentUser="currentUser" 
-        ref="assetsDashboardRef"
+    <!-- 更改家庭名稱 Modal -->
+    <div v-if="showRenameFamilyModal" class="modal-overlay" @click.self="showRenameFamilyModal = false">
+      <div class="modal-card">
+        <h3>✏️ {{ t('rename_family') || '更改家庭名稱' }}</h3>
+        <input 
+          v-model="newFamilyName" 
+          type="text" 
+          :placeholder="t('enter_family_name') || '輸入新的家庭名稱'"
+          class="modal-input" 
+          :disabled="renameFamilyLoading"
+          maxlength="50"
+        />
+        <p v-if="renameFamilyMessage" :class="renameFamilyMessage.includes('✅') ? 'success-msg' : 'error-msg'">{{ renameFamilyMessage }}</p>
+        <div class="modal-actions">
+          <button @click="handleRenameFamily" class="btn-confirm" :disabled="renameFamilyLoading || !newFamilyName.trim()">
+            {{ renameFamilyLoading ? '...' : t('save') }}
+          </button>
+          <button @click="showRenameFamilyModal = false" class="btn-cancel">{{ t('cancel') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 新增帳本 Modal -->
+    <div v-if="showCreateLedgerModal" class="modal-overlay" @click.self="showCreateLedgerModal = false">
+      <div class="modal-card">
+        <h3>📚 {{ t('new_ledger') }}</h3>
+        <input 
+          v-model="newLedgerName" 
+          type="text" 
+          :placeholder="t('ledger_name') || '帳本名稱'"
+          class="modal-input" 
+          :disabled="createLedgerLoading"
+          maxlength="50"
+        />
+        
+        <div class="modal-actions">
+          <button @click="createLedger" class="btn-confirm" :disabled="createLedgerLoading || !newLedgerName.trim()">
+            {{ createLedgerLoading ? '...' : t('save') }}
+          </button>
+          <button @click="showCreateLedgerModal = false; newLedgerName = ''" class="btn-cancel">{{ t('cancel') }}</button>
+        </div>
+      </div>
+    </div>
+
+      <!-- Ledger Settings Modal -->
+      <LedgerSettingsModal 
+         v-if="showLedgerSettingsModal && activeLedger && activeLedger.id"
+         :ledger="activeLedger" 
+         :currentUser="currentUser"
+         @close="showLedgerSettingsModal = false"
+         @updated="fetchLedgers"
+         @deleted="showLedgerSettingsModal = false; fetchLedgers();" 
+         @switched="showLedgerSettingsModal = false;"
       />
 
-      <!-- Stats Panel -->
-      <StatsPanel 
-        :stats="stats"
-        :trendData="trendData"
-        :budgetLimit="budgetLimit"
-        :monthlyExpense="monthlyExpense"
-        :totalAmount="totalAmount"
-        :categories="categories"
-        :transactions="transactions"
-        :isDarkMode="isDarkMode"
-        @update-budget="saveBudget"
-        @import="handleImport"
-        @export="exportExcel"
-        @download-sample="downloadSample"
-        @show-toast="showToast"
-      />
 
-      <!-- Category Budget Panel -->
-      <CategoryBudgetPanel
-        v-if="currentUser"
-        :currentUser="currentUser"
-        :categories="categories"
-        @show-toast="showToast"
-      />
 
-      <!-- Recurring Transactions Manager -->
-      <RecurringManager
-        v-if="currentUser"
-        :currentUser="currentUser"
-        :categories="categories"
-        :paymentMethods="paymentMethods"
-        @show-toast="showToast"
-        @refresh-data="fetchData"
-      />
+      <!-- Empty State / Onboarding -->
+      <div v-if="ledgers.length === 0" class="empty-state-container">
+        <div class="empty-state-content">
+          <div class="empty-icon">👋</div>
+          <h2>{{ t('welcome_title') || '歡迎使用！' }}</h2>
+          <p>{{ t('welcome_desc') || '請先建立您的第一個帳本開始記帳' }}</p>
+          <button @click="showCreateLedgerModal = true" class="btn-primary-large">
+             + {{ t('new_ledger') || '建立帳本' }}
+          </button>
+        </div>
+      </div>
 
-      <!-- Quick Entry Templates -->
-      <QuickEntry
-        :currentUser="currentUser"
-        :categories="categories"
-        @use-template="useTemplate"
-      />
+      <!-- Main Dashboard Content -->
+      <div v-else>
+        <!-- Assets Dashboard (New Phase 2) -->
+        <AssetsDashboard 
+          v-if="currentUser" 
+          :currentUser="currentUser" 
+          ref="assetsDashboardRef"
+        />
 
-      <!-- Transaction Form -->
-      <TransactionForm
-        ref="formRef"
-        v-model:form="form"
-        v-model:rateUpdatedAt="rateUpdatedAt"
-        :categories="categories"
-        :paymentMethods="paymentMethods"
-        :isEditing="isEditing"
-        @submit="handleSubmit"
-        @cancel="cancelEdit"
-        @manage-categories="showCategoryManager = true"
-        @manage-payment-methods="showPaymentMethodManager = true"
-      />
+        <!-- Stats Panel -->
+        <StatsPanel 
+          :stats="stats"
+          :trendData="trendData"
+          :budgetLimit="budgetLimit"
+          :monthlyExpense="monthlyExpense"
+          :totalAmount="totalAmount"
+          :categories="categories"
+          :transactions="transactions"
+          :isDarkMode="isDarkMode"
+          @update-budget="saveBudget"
+          @import="handleImport"
+          @export="exportExcel"
+          @download-sample="downloadSample"
+          @show-toast="showToast"
+        />
 
-      <!-- Transaction List -->
-      <TransactionList
-        :transactions="transactions"
-        v-model:keyword="keyword"
-        v-model:startDate="startDate"
-        v-model:endDate="endDate"
-        v-model:showCalendar="showCalendar"
-        :filterDate="calendarSelectedDate"
-        @edit="startEdit"
-        @delete="removeTransaction"
-        @duplicate="duplicateTransaction"
-      >
-        <template #calendar>
-          <CalendarView 
-            v-if="showCalendar" 
-            :trendData="trendData" 
-            :locale="currentLocale" 
-            :selectedDate="calendarSelectedDate"
-            @date-selected="handleDateSelect" 
-            @month-change="handleMonthChange"
-          />
-        </template>
-      </TransactionList>
+        <!-- Category Budget Panel -->
+        <CategoryBudgetPanel
+          v-if="currentUser"
+          :currentUser="currentUser"
+          :categories="categories"
+          @show-toast="showToast"
+        />
+
+        <!-- Recurring Transactions Manager -->
+        <RecurringManager
+          v-if="currentUser"
+          :currentUser="currentUser"
+          :categories="categories"
+          :paymentMethods="paymentMethods"
+          @show-toast="showToast"
+          @refresh-data="fetchData"
+        />
+
+        <!-- Quick Entry Templates -->
+        <QuickEntry
+          :currentUser="currentUser"
+          :categories="categories"
+          @use-template="useTemplate"
+        />
+
+        <!-- Transaction Form -->
+        <TransactionForm
+          ref="formRef"
+          v-model:form="form"
+          v-model:rateUpdatedAt="rateUpdatedAt"
+          :categories="categories"
+          :paymentMethods="paymentMethods"
+          :isEditing="isEditing"
+          @submit="handleSubmit"
+          @cancel="cancelEdit"
+          @manage-categories="showCategoryManager = true"
+          @manage-payment-methods="showPaymentMethodManager = true"
+        />
+
+        <!-- Transaction List -->
+        <TransactionList
+          :transactions="transactions"
+          v-model:keyword="keyword"
+          v-model:startDate="startDate"
+          v-model:endDate="endDate"
+          v-model:showCalendar="showCalendar"
+          :filterDate="calendarSelectedDate"
+          @edit="startEdit"
+          @delete="removeTransaction"
+          @duplicate="duplicateTransaction"
+        >
+          <template #calendar>
+            <CalendarView 
+              v-if="showCalendar" 
+              :trendData="trendData" 
+              :locale="currentLocale" 
+              :selectedDate="calendarSelectedDate"
+              @date-selected="handleDateSelect" 
+              @month-change="handleMonthChange"
+            />
+          </template>
+        </TransactionList>
+      </div>
     </div>
     
     <CategoryManager 
@@ -1005,6 +1193,40 @@ body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
 .btn-theme { background: #e0e0e0; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; transition: all 0.3s; display: flex; align-items: center; justify-content: center; }
 .btn-theme:hover { transform: scale(1.1); }
 
+/* Edit User Button */
+.btn-edit-user { background: transparent; border: none; cursor: pointer; font-size: 0.8rem; padding: 2px 4px; border-radius: 4px; transition: all 0.2s; margin-left: 5px; opacity: 0.7; }
+.btn-edit-user:hover { opacity: 1; transform: scale(1.1); background: rgba(0,0,0,0.1); }
+
+/* Ledger Switcher */
+.ledger-switcher { display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); padding: 6px 10px; border-radius: 20px; margin-top: 8px; }
+.ledger-icon { font-size: 1rem; }
+.ledger-select { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 6px 10px; font-size: 0.85rem; cursor: pointer; min-width: 100px; }
+.ledger-select:focus { outline: none; border-color: #667eea; }
+.btn-add-ledger { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 1rem; font-weight: bold; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+.btn-add-ledger:hover { transform: scale(1.1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); }
+
+/* Delete Account Button */
+.btn-delete-account { background: #fee2e2; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; transition: all 0.3s; display: flex; align-items: center; justify-content: center; }
+.btn-delete-account:hover { background: #fecaca; transform: scale(1.1); }
+
+/* Danger Button & Modal */
+.btn-danger { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all 0.3s; }
+.btn-danger:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4); }
+.btn-danger:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.delete-modal { border: 2px solid #fecaca; }
+.delete-warning { color: #dc2626; font-weight: 600; background: #fef2f2; padding: 12px; border-radius: 8px; margin: 15px 0; }
+.delete-confirm-hint { color: #666; margin-bottom: 10px; }
+.delete-input { border-color: #fecaca !important; }
+.delete-password-row { display: flex; gap: 10px; align-items: stretch; margin-bottom: 10px; }
+.delete-password-row input { flex: 1; margin-bottom: 0; }
+.btn-send-code { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.3s; white-space: nowrap; }
+.btn-send-code:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3); }
+.btn-send-code:disabled { opacity: 0.5; cursor: not-allowed; background: #ccc; }
+
+/* Edit Family Button */
+.btn-edit-family { background: transparent; border: none; cursor: pointer; font-size: 0.9rem; padding: 2px 6px; margin-left: 8px; border-radius: 4px; transition: all 0.2s; }
+.btn-edit-family:hover { background: rgba(0,0,0,0.1); transform: scale(1.1); }
+
 /* Loading Overlay */
 .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
 .loading-spinner { width: 50px; height: 50px; border: 4px solid #e0e0e0; border-top-color: #667eea; border-radius: 50%; animation: spin 1s linear infinite; }
@@ -1019,6 +1241,7 @@ body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
 .app-title { text-align: center; color: #333; font-size: 2.2rem; margin: 0; font-weight: 800; letter-spacing: 1px; }
 .user-info { color: #666; font-size: 1rem; }
 .admin-badge { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; margin-left: 8px; vertical-align: middle; }
+.family-admin-badge { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important; }
 .btn-logout { background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.3s; }
 .btn-logout:hover { background: #c0392b; transform: translateY(-2px); }
 
@@ -1284,6 +1507,28 @@ body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
 .toast-notification.error { background: #e74c3c; }
 .toast-notification.info { background: #3498db; }
 .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
+
+/* Ledger Type Select */
+.ledger-type-select { display: flex; gap: 15px; margin: 15px 0; justify-content: center; }
+.type-option { display: flex; align-items: center; gap: 5px; cursor: pointer; border: 1px solid #ddd; padding: 8px 12px; border-radius: 20px; transition: all 0.2s; }
+.type-option:hover { background: #f0f0f0; }
+.type-option input:checked + span { font-weight: bold; color: #667eea; }
+.type-option:has(input:checked) { border-color: #667eea; background: rgba(102, 126, 234, 0.1); }
+
+/* Empty State */
+.empty-state-container { display: flex; justify-content: center; align-items: center; min-height: 60vh; text-align: center; }
+.empty-state-content { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 500px; width: 100%; }
+.empty-icon { font-size: 4rem; margin-bottom: 20px; }
+.empty-state-content h2 { margin-bottom: 10px; color: #2c3e50; }
+.empty-state-content p { color: #666; margin-bottom: 30px; }
+.btn-primary-large { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px 40px; border-radius: 50px; font-size: 1.2rem; cursor: pointer; transition: all 0.3s; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+.btn-primary-large:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6); }
+
+/* Dark Mode Empty State */
+:global(.dark) .empty-state-content { background: #2d3748; color: #f5f5f5; }
+:global(.dark) .empty-state-content h2 { color: #f5f5f5; }
+:global(.dark) .empty-state-content p { color: #cbd5e0; }
+
 .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-20px); }
 :global(.dark) .btn-theme { background: #2d3748; }
 :global(.dark) .lang-select { background-color: #2d3748; border-color: #4a5568; color: #fff; }

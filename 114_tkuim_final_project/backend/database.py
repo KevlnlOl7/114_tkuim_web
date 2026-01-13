@@ -23,6 +23,7 @@ templates_collection = db["templates"]
 recurring_collection = db["recurring"]
 category_budgets_collection = db["category_budgets"]
 payment_methods_collection = db["payment_methods"]
+ledgers_collection = db["ledgers"]
 
 # Alias for backward compatibility
 collection = transactions_collection

@@ -127,7 +127,51 @@ const messages = {
         delete_template_confirm: '確定要刪除這個模板嗎？',
         balance: '結餘', left_family: '已離開家庭',
         password_min_length: '密碼長度至少需要 8 個字元',
-        password_complexity: '密碼必須包含大寫字母、小寫字母和數字'
+        password_complexity: '密碼必須包含大寫字母、小寫字母和數字',
+        // Delete Account Modal
+        delete_account_title: '刪除帳號',
+        delete_warning: '此操作無法復原！您的所有資料將被永久刪除。',
+        type_username_confirm: '請輸入您的帳號名稱以確認：',
+        enter_password: '請輸入密碼',
+        send_verification_code: '發送驗證碼',
+        sending_code: '發送中...',
+        enter_verification_code: '請輸入郵件中的 6 位數字驗證碼',
+        confirm_delete_account: '確認刪除帳號',
+        code_sent: '驗證碼已發送至您的信箱',
+        account_deleted: '帳號已成功刪除',
+        username_mismatch: '帳號名稱不符',
+        // Family Rename
+        rename_family: '更改家庭名稱',
+        enter_family_name: '輸入新的家庭名稱',
+        family_renamed: '家庭名稱已更新',
+        change_password: '修改密碼', 老密碼: '舊密碼', 新密碼: '新密碼', 確認密碼: '確認密碼',
+        // Ledgers
+        ledger: '帳本',
+        ledgers: '帳本',
+        personal_ledger: '個人帳本',
+        family_ledger: '家庭帳本',
+        new_ledger: '新增帳本',
+        ledger_name: '帳本名稱',
+        switch_ledger: '切換帳本',
+        all_ledgers: '所有帳本',
+        no_ledgers: '尚無帳本',
+        // User Rename
+        edit_name: '修改顯示名稱',
+        enter_valid_name: '輸入新的名稱',
+        update_success: '更新成功',
+        // Welcome
+        welcome_title: '歡迎使用！',
+        welcome_desc: '請先建立您的第一個帳本開始記帳',
+        // Ledger Settings
+        ledger_settings: '帳本設定', general: '一般設定', members: '成員管理',
+        danger_zone: '危險區域', delete_ledger: '刪除帳本', delete_ledger_confirm: '確定要刪除此帳本嗎？此操作無法復原！',
+        leave_ledger: '退出帳本', leave_ledger_confirm: '確定要退出此帳本嗎？',
+        invite_member: '邀請成員', invite_hint: '將此邀請碼分享給朋友，他們即可加入此帳本。',
+        copy_code: '複製邀請碼', code_copied: '已複製！', regenerate: '重新產生',
+        member_list: '成員列表', remove_member_confirm: '確定要移除 {name} 嗎？',
+        owner: '擁有者', member: '成員',
+        save_changes: '儲存變更', ledger_name_ph: '請輸入帳本名稱',
+        join_ledger: '加入帳本'
     },
     'en-US': {
         item_desc: 'Title', amount: 'Amount', date: 'Date', category: 'Category',
@@ -258,7 +302,50 @@ const messages = {
         daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly',
         category_budget: 'Category Budget', set_budget: 'Set Budget',
         day_before_yesterday: 'Day Before Yesterday', yesterday: 'Yesterday', today: 'Today', to_date: 'to', default_currency: 'Default Currency',
-        optional: 'Optional', select_option: 'Select', no_chart_data: 'No chart data available'
+        optional: 'Optional', select_option: 'Select', no_chart_data: 'No chart data available',
+        // Delete Account Modal
+        delete_account_title: 'Delete Account',
+        delete_warning: 'This action cannot be undone! All your data will be permanently deleted.',
+        type_username_confirm: 'Please type your username to confirm:',
+        enter_password: 'Enter password',
+        send_verification_code: 'Send Code',
+        sending_code: 'Sending...',
+        enter_verification_code: 'Enter 6-digit code from email',
+        confirm_delete_account: 'Confirm Delete',
+        code_sent: 'Verification code sent to your email',
+        account_deleted: 'Account deleted successfully',
+        username_mismatch: 'Username does not match',
+        // Family Rename
+        rename_family: 'Rename Family',
+        enter_family_name: 'Enter new family name',
+        family_renamed: 'Family name updated',
+        change_password: 'Change Password',
+        // Ledgers
+        ledger: 'Ledger',
+        ledgers: 'Ledgers',
+        personal_ledger: 'Personal',
+        family_ledger: 'Family',
+        new_ledger: 'New Ledger',
+        ledger_name: 'Ledger Name',
+        switch_ledger: 'Switch Ledger',
+        all_ledgers: 'All Ledgers',
+        no_ledgers: 'No Ledgers',
+        // User Rename
+        edit_name: 'Edit Name',
+        enter_valid_name: 'Enter new name',
+        update_success: 'Update Successful',
+        // Welcome
+        welcome_title: 'Welcome!',
+        welcome_desc: 'Create your first ledger to start tracking.',
+        // Ledger Settings
+        ledger_settings: 'Ledger Settings', general: 'General', members: 'Members',
+        danger_zone: 'Danger Zone', delete_ledger: 'Delete Ledger', delete_ledger_confirm: 'Are you sure you want to delete this ledger? This cannot be undone!',
+        leave_ledger: 'Leave Ledger', leave_ledger_confirm: 'Are you sure you want to leave this ledger?',
+        invite_member: 'Invite Member', invite_hint: 'Share this code with friends to let them join this ledger.',
+        copy_code: 'Copy Code', code_copied: 'Copied!', regenerate: 'Regenerate',
+        member_list: 'Member List', remove_member_confirm: 'Remove {name}?',
+        owner: 'Owner', member: 'Member',
+        save_changes: 'Save Changes', ledger_name_ph: 'Enter ledger name', join_ledger: 'Join Ledger'
     },
     'vi': {
         item_desc: 'Tiêu đề', amount: 'Số tiền', date: 'Ngày', category: 'Danh mục',
@@ -366,6 +453,16 @@ const messages = {
         // Sort
         sort_date_desc: '📅 Ngày (Mới→Cũ)', sort_date_asc: '📅 Ngày (Cũ→Mới)',
         sort_amount_desc: '💰 Số tiền (Lớn→Nhỏ)', sort_amount_asc: '💰 Số tiền (Nhỏ→Lớn)',
+        // Ledger Settings
+        ledger_settings: 'Cài đặt Sổ', general: 'Chung', members: 'Thành viên',
+        danger_zone: 'Vùng nguy hiểm', delete_ledger: 'Xóa Sổ', delete_ledger_confirm: 'Bạn có chắc chắn muốn xóa sổ này không? Không thể hoàn tác!',
+        leave_ledger: 'Rời Sổ', leave_ledger_confirm: 'Bạn có chắc chắn muốn rời sổ này không?',
+        invite_member: 'Mời thành viên', invite_hint: 'Chia sẻ mã này cho bạn bè để họ tham gia sổ này.',
+        copy_code: 'Sao chép', code_copied: 'Đã sao chép!', regenerate: 'Tạo lại',
+        member_list: 'Danh sách thành viên', remove_member_confirm: 'Xóa {name}?',
+        owner: 'Chủ sở hữu', member: 'Thành viên',
+        save_changes: 'Lưu thay đổi', ledger_name_ph: 'Nhập tên sổ',
+        ledger_name: 'Tên Sổ', join_ledger: 'Tham gia Sổ', edit_name: 'Sửa tên', enter_valid_name: 'Nhập tên mới'
     },
     'id': {
         item_desc: 'Judul', amount: 'Jumlah', date: 'Tanggal', category: 'Kategori',
@@ -473,6 +570,7 @@ const messages = {
         // Sort
         sort_date_desc: '📅 Tanggal (Baru→Lama)', sort_date_asc: '📅 Tanggal (Lama→Baru)',
         sort_amount_desc: '💰 Jumlah (Besar→Kecil)', sort_amount_asc: '💰 Jumlah (Kecil→Besar)',
+        ledger_name: 'Nama Buku', join_ledger: 'Gabung Buku', edit_name: 'Ubah Nama', enter_valid_name: 'Masukan nama baru'
     },
     'ja': {
         item_desc: '項目名', amount: '金額', date: '日付', category: 'カテゴリ',
@@ -580,6 +678,16 @@ const messages = {
         // Sort
         sort_date_desc: '📅 日付 (新→旧)', sort_date_asc: '📅 日付 (旧→新)',
         sort_amount_desc: '💰 金額 (高い順)', sort_amount_asc: '💰 金額 (低い順)',
+        // Ledger Settings
+        ledger_settings: '帳簿設定', general: '一般', members: 'メンバー',
+        danger_zone: '危険エリア', delete_ledger: '帳簿を削除', delete_ledger_confirm: '本当にこの帳簿を削除しますか？元に戻せません！',
+        leave_ledger: '帳簿から退出', leave_ledger_confirm: '本当にこの帳簿から退出しますか？',
+        invite_member: 'メンバー招待', invite_hint: 'このコードを友達に共有して、帳簿に参加させましょう。',
+        copy_code: 'コードをコピー', code_copied: 'コピーしました！', regenerate: '再生成',
+        member_list: 'メンバーリスト', remove_member_confirm: '{name} を削除しますか？',
+        owner: '所有者', member: 'メンバー',
+        save_changes: '変更を保存', ledger_name_ph: '帳簿名を入力',
+        ledger_name: '帳簿名', join_ledger: '帳簿に参加', edit_name: '名前を変更', enter_valid_name: '新しい名前を入力'
     },
     'ko': {
         item_desc: '항목', amount: '금액', date: '날짜', category: '카테고리',
@@ -687,6 +795,16 @@ const messages = {
         // Sort
         sort_date_desc: '📅 날짜 (최신순)', sort_date_asc: '📅 날짜 (오래된순)',
         sort_amount_desc: '💰 금액 (높은순)', sort_amount_asc: '💰 금액 (낮은순)',
+        // Ledger Settings
+        ledger_settings: '가계부 설정', general: '일반', members: '멤버 관리',
+        danger_zone: '위험 구역', delete_ledger: '가계부 삭제', delete_ledger_confirm: '이 가계부를 삭제하시겠습니까? 되돌릴 수 없습니다!',
+        leave_ledger: '가계부 나가기', leave_ledger_confirm: '이 가계부에서 나가시겠습니까?',
+        invite_member: '멤버 초대', invite_hint: '이 코드를 친구에게 공유하여 가계부에 초대하세요.',
+        copy_code: '코드 복사', code_copied: '복사됨!', regenerate: '재생성',
+        member_list: '멤버 목록', remove_member_confirm: '{name}님을 삭제하시겠습니까?',
+        owner: '소유자', member: '멤버',
+        save_changes: '변경사항 저장', ledger_name_ph: '가계부 이름 입력',
+        ledger_name: '가계부 이름', join_ledger: '가계부 참여', edit_name: '이름 수정', enter_valid_name: '새 이름 입력'
     },
     'tl': {
         item_desc: 'Pamagat', amount: 'Halaga', date: 'Petsa', category: 'Kategorya',
@@ -790,6 +908,7 @@ const messages = {
         // Sort
         sort_date_desc: '📅 Petsa (Bago→Luma)', sort_date_asc: '📅 Petsa (Luma→Bago)',
         sort_amount_desc: '💰 Halaga (Malaki→Maliit)', sort_amount_asc: '💰 Halaga (Maliit→Malaki)',
+        ledger_name: 'Pangalan ng Libro', join_ledger: 'Sumali sa Libro', edit_name: 'Palitan ang Pangalan', enter_valid_name: 'Ipasok ang bagong pangalan'
     }
 }
 

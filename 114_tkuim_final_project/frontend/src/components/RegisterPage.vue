@@ -162,23 +162,6 @@ const handleRegister = async () => {
           />
         </div>
         
-        <div class="role-selector">
-          <label>👑 {{ t('role_label') }}</label>
-          <div class="role-options">
-            <label class="role-option" :class="{ active: role === 'user' }">
-              <input type="radio" v-model="role" value="user" :disabled="isLoading" />
-              <span class="role-icon">👤</span>
-              <span class="role-text">{{ t('general_member') }}</span>
-              <span class="role-desc">{{ t('role_user_desc') }}</span>
-            </label>
-            <label class="role-option" :class="{ active: role === 'admin' }">
-              <input type="radio" v-model="role" value="admin" :disabled="isLoading" />
-              <span class="role-icon">👨‍👩‍👧</span>
-              <span class="role-text">{{ t('family_admin') }}</span>
-              <span class="role-desc">{{ t('role_admin_desc') }}</span>
-            </label>
-          </div>
-        </div>
         
         <p v-if="error" class="error-text">{{ error }}</p>
         <p v-if="success" class="success-text">{{ success }}</p>
