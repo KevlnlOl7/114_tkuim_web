@@ -5,7 +5,7 @@ import io
 import hashlib
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pymongo import MongoClient
@@ -102,6 +102,7 @@ recurring_collection = db["recurring"]
 category_budgets_collection = db["category_budgets"]
 payment_methods_collection = db["payment_methods"]
 ledgers_collection = db["ledgers"]
+invites_collection = db["invites"]
 
 # --- 密碼加密 ---
 # --- 密碼加密 (Salted SHA256) ---
@@ -1096,55 +1097,82 @@ def get_transactions(
 ):
     query = {}
     
-    # IDOR 防護：只能查詢自己或家庭成員
-    # 若是 Admin 且 query 帶有 user_id，則允許 (假設 Admin 可看所有人)
-    # 若是 User，強制鎖定範圍
+    # ✅ 完全重構的查詢邏輯
+    # 優先級：ledger_id > user_id filtering > default to current user
     
-    requesting_uid = user_id or current_user['username'] # 這裡簡化，假設 user_id 傳的是 username (前端傳 activeUser.username)
-    # 注意：這裡邏輯比較複雜，因為前端可能傳 username 也可能傳 user_id (ObjectId string)
-    # 我們假設 user_id 參數傳的是 username 用於過濾
+    # STEP 1: 帳本篩選優先
+    if ledger_id and ledger_id != "all":
+        # 驗證用戶是否為該帳本的成員
+        ledger = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+        if not ledger:
+            raise HTTPException(status_code=404, detail="帳本不存在")
+        
+        # 檢查當前用戶是否為成員
+        if current_user["id"] not in ledger.get("members", []):
+            raise HTTPException(status_code=403, detail="您不是此帳本的成員")
+        
+        # ✅ 只按 ledger_id 篩選，返回所有成員的交易
+        query["ledger_id"] = ledger_id
     
-    # IDOR 防護：一般使用者只能查自己或家屬
-    if current_user['role'] != 'admin':
-        # 如果有指定查詢對象
-        target_uid = user_id or (user_ids.split(',')[0] if user_ids else None)
-        if target_uid:
-            # 檢查 target_uid 是否為本人 (可能是 ID 也可能是 username)
-            is_self = (target_uid == current_user['id'] or target_uid == current_user['username'])
-            if not is_self:
-                # 檢查是否為家屬
-                if not is_family_member(current_user['username'], target_uid):
-                    raise HTTPException(status_code=403, detail="您無權查看此人資料")
+    # STEP 2: 「所有帳本」視圖
+    else:
+        # 獲取用戶所屬的所有帳本ID
+        user_ledgers = list(ledgers_collection.find({
+            "$or": [
+                {"owner_id": current_user["id"]},
+                {"members": current_user["id"]}
+            ]
+        }))
+        user_ledger_ids = [str(l["_id"]) for l in user_ledgers]
+        
+        # 查詢條件：用戶自己的交易 OR 所屬帳本的交易
+        if user_ledger_ids:
+            query["$or"] = [
+                {"user_id": current_user["id"]},  # 用戶自己的所有交易
+                {"ledger_id": {"$in": user_ledger_ids}}  # 所屬帳本的交易
+            ]
+        else:
+            # 沒有帳本，只顯示自己的交易
+            query["user_id"] = current_user["id"]
 
-    # 如果沒傳 user_id，預設查自己 (修正原本 "防資料外洩" 的邏輯)
-    if not user_id and not user_ids:
-        user_id = current_user['username']
+    # 🔍 DEBUG: Print query to console
+    print("=" * 80)
+    print(f"[DEBUG] GET /api/transactions")
+    print(f"[DEBUG] Current User ID: {current_user['id']}")
+    print(f"[DEBUG] Current User Username: {current_user.get('username', 'N/A')}")
+    print(f"[DEBUG] Ledger ID param: {ledger_id}")
+    print(f"[DEBUG] Keyword param: {repr(keyword)}")
+    print(f"[DEBUG] MongoDB Query: {query}")
 
-    # --- 使用新的 Filter 邏輯 ---
-    member_ids = get_user_ids_to_filter(user_id=user_id, user_ids=user_ids)
-    if member_ids:
-        query["user_id"] = {"$in": member_ids}
-    elif not current_user.get("role") == "admin":
-        # 如果不是 admin 且沒過濾，預設看自己
-        query["user_id"] = current_user["id"]
-    
-    if keyword:
+    # ✅ FIX: 使用 $and 來組合多個條件，避免 $or 覆蓋問題
+    # 只有在 keyword 非空時才處理
+    if keyword and keyword.strip():  # ✅ 修復：忽略空字串和純空白
         # 使用 re.escape 防止 Regex Injection
         safe_keyword = re.escape(keyword)
-        query["$or"] = [
-            {"title": {"$regex": safe_keyword, "$options": "i"}},
-            {"note": {"$regex": safe_keyword, "$options": "i"}}
-        ]
+        # 如果 query 已經有 $or（來自用戶篩選），需要用 $and 包裹
+        if "$or" in query:
+            # 將現有的 $or 和 keyword 搜尋都放進 $and
+            existing_or = query.pop("$or")
+            query["$and"] = [
+                {"$or": existing_or},  # 用戶篩選條件
+                {"$or": [  # keyword 搜尋條件
+                    {"title": {"$regex": safe_keyword, "$options": "i"}},
+                    {"note": {"$regex": safe_keyword, "$options": "i"}}
+                ]}
+            ]
+        else:
+            # 沒有現有的 $or，直接設置
+            query["$or"] = [
+                {"title": {"$regex": safe_keyword, "$options": "i"}},
+                {"note": {"$regex": safe_keyword, "$options": "i"}}
+            ]
+    
     if start_date and end_date:
         query["date"] = {"$gte": start_date, "$lte": end_date}
     elif start_date:
         query["date"] = {"$gte": start_date}
     elif end_date:
         query["date"] = {"$lte": end_date}
-    
-    # 帳本篩選
-    if ledger_id and ledger_id != "all":
-        query["ledger_id"] = ledger_id
 
     data = collection.find(query).sort("date", -1)
     
@@ -1152,12 +1180,24 @@ def get_transactions(
     results = []
     for doc in data:
         item = fix_id(doc)
-        # 若有 user_id，查詢使用者名稱
+        # 若有 user_id，查詢使用者名稱（所有用戶都能看到）
         if doc.get("user_id"):
             user = users_collection.find_one({"_id": ObjectId(doc["user_id"])})
             if user:
                 item["user_display_name"] = user.get("display_name", "Unknown")
+        
+        # ✅ FIX: 清理 NaN 值，防止 JSON 序列化錯誤
+        import math
+        for key, value in item.items():
+            if isinstance(value, float):
+                if math.isnan(value) or math.isinf(value):
+                    item[key] = 0  # 將 NaN/Infinity 替換為 0
+        
         results.append(item)
+    
+    # 🔍 DEBUG: Print result count
+    print(f"[DEBUG] Query returned {len(results)} transactions")
+    print("=" * 80)
     
     return results
 
@@ -1272,15 +1312,46 @@ def set_budget(budget: BudgetSetting):
 from fastapi.responses import StreamingResponse
 
 @app.get("/api/export")
-def export_excel(current_user: dict = Depends(get_current_user)):
-    # Export only the current user's transactions (or all for admin)
-    query = {} if current_user.get("role") == "admin" else {"user_id": current_user["id"]}
+def export_excel(
+    user_ids: Optional[str] = None,  # ✅ NEW: 允許篩選用戶
+    current_user: dict = Depends(get_current_user)
+):
+    # ✅ 構建查詢條件，支持用戶篩選
+    if user_ids:
+        # 解析用戶ID列表
+        ids_list = [uid.strip() for uid in user_ids.split(',') if uid.strip()]
+        
+        # 權限檢查：管理員可以匯出任何人，一般用戶只能匯出自己
+        if current_user.get("role") != "admin":
+            # 檢查是否只選擇了自己
+            if len(ids_list) != 1 or ids_list[0] != current_user["id"]:
+                raise HTTPException(status_code=403, detail="無權匯出其他用戶資料")
+        
+        query = {"user_id": {"$in": ids_list}}
+    else:
+        # 原本邏輯：管理員全部，一般用戶只查自己
+        query = {} if current_user.get("role") == "admin" else {"user_id": current_user["id"]}
+    
     data = list(collection.find(query).sort("date", -1))
     if not data:
         raise HTTPException(status_code=404, detail="無資料")
-    for doc in data: doc["_id"] = str(doc["_id"])
+    
+    # ✅ 添加用戶名稱欄位
+    for doc in data:
+        doc["_id"] = str(doc["_id"])
+        # 查詢記帳人名稱
+        if doc.get("user_id"):
+            user = users_collection.find_one({"_id": ObjectId(doc["user_id"])})
+            if user:
+                doc["user_display_name"] = user.get("display_name", "Unknown")
+            else:
+                doc["user_display_name"] = "Unknown"
+        else:
+            doc["user_display_name"] = "Unknown"
+    
     df = pd.DataFrame(data)
-    cols = ["date", "type", "category", "title", "amount", "payment_method", "note"]
+    # ✅ 添加 user_display_name 到匯出欄位
+    cols = ["date", "type", "category", "title", "amount", "payment_method", "note", "user_display_name"]
     df = df[[c for c in cols if c in df.columns]]
     
     # Use in-memory buffer
@@ -1350,7 +1421,11 @@ def get_import_sample(format: str = "csv"):
 
 # [匯入] Excel/CSV (新功能!)
 @app.post("/api/import")
-async def import_file(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+async def import_file(
+    file: UploadFile = File(...), 
+    ledger_id: Optional[str] = Form(None),  # ✅ FIXED: Use Form() to accept from FormData
+    current_user: dict = Depends(get_current_user)
+):
     try:
         contents = await file.read()
         
@@ -1375,11 +1450,19 @@ async def import_file(file: UploadFile = File(...), current_user: dict = Depends
         # 轉成字典列表
         records = df.to_dict(orient="records")
         
-        # 補上 user_id 並處理日期
+        # 補上 user_id 和 ledger_id，並處理日期
         final_records = []
         for r in records:
             # 確保有 user_id
             r["user_id"] = current_user["id"]
+            
+            # NEW: 設置 ledger_id (如果有提供且不是 'all')
+            if ledger_id and ledger_id != "all":
+                # Verify user has access to this ledger
+                ledger = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+                if ledger and current_user["id"] in ledger.get("members", []):
+                    r["ledger_id"] = ledger_id
+                # If ledger not found or user not a member, don't set ledger_id
             
             # 處理日期 (確保是 datetime 物件，方便 MongoDB 查詢與排序)
             try:
@@ -1479,14 +1562,29 @@ def get_account_stats(user_id: Optional[str] = None, user_ids: Optional[str] = N
     balances = {}
     for item in source_res:
         if item["_id"]:
-            balances[item["_id"]] = balances.get(item["_id"], 0) + item["balance"]
+            balance_val = item.get("balance", 0)
+            # 防止 NaN 值
+            if balance_val is None or (isinstance(balance_val, float) and not (balance_val == balance_val)):
+                balance_val = 0
+            balances[item["_id"]] = balances.get(item["_id"], 0) + balance_val
         
     for item in target_res:
         if item["_id"]:
-            balances[item["_id"]] = balances.get(item["_id"], 0) + item["balance"]
+            balance_val = item.get("balance", 0)
+            # 防止 NaN 值
+            if balance_val is None or (isinstance(balance_val, float) and not (balance_val == balance_val)):
+                balance_val = 0
+            balances[item["_id"]] = balances.get(item["_id"], 0) + balance_val
         
-    # 轉回 List + 排序
-    result = [{"account": k, "balance": v} for k, v in balances.items()]
+    # 轉回 List + 排序，並再次驗證
+    import math
+    result = []
+    for k, v in balances.items():
+        # 最終驗證：確保沒有 NaN 或 Infinity
+        if v is None or (isinstance(v, float) and (math.isnan(v) or math.isinf(v))):
+            v = 0
+        result.append({"account": k, "balance": v})
+    
     return sorted(result, key=lambda x: x["account"])
 
 
@@ -1831,3 +1929,280 @@ def delete_category(id: str):
         
     categories_collection.delete_one({"_id": ObjectId(id)})
     return {"message": "分類已刪除"}
+
+# ============================================================
+# Ledger Management System
+# ============================================================
+
+class LedgerCreate(BaseModel):
+    name: str
+    type: Optional[str] = "shared"  # "personal" or "shared"
+
+class LedgerUpdate(BaseModel):
+    name: str
+
+# [Ledgers] Get all ledgers for current user
+@app.get("/api/ledgers")
+def get_ledgers(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    
+    # Find ledgers where user is owner or member
+    ledgers = list(ledgers_collection.find({
+        "$or": [
+            {"owner_id": user_id},
+            {"members": user_id}
+        ]
+    }))
+    
+    return [fix_id(ledger) for ledger in ledgers]
+
+# [Ledgers] Create new ledger
+@app.post("/api/ledgers")
+def create_ledger(ledger: LedgerCreate, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    
+    new_ledger = {
+        "name": ledger.name,
+        "type": ledger.type,
+        "owner_id": user_id,
+        "members": [user_id],  # Owner is automatically a member
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat()
+    }
+    
+    result = ledgers_collection.insert_one(new_ledger)
+    return {
+        "message": "帳本已建立",
+        "id": str(result.inserted_id),
+        "name": ledger.name
+    }
+
+# [Ledgers] Update ledger (only owner)
+@app.put("/api/ledgers/{ledger_id}")
+def update_ledger(ledger_id: str, ledger: LedgerUpdate, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    
+    existing = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+    if not existing:
+        raise HTTPException(status_code=404, detail="帳本不存在")
+    
+    # Only owner can update
+    if existing.get("owner_id") != user_id:
+        raise HTTPException(status_code=403, detail="只有帳本擁有者可以修改")
+    
+    ledgers_collection.update_one(
+        {"_id": ObjectId(ledger_id)},
+        {"$set": {
+            "name": ledger.name,
+            "updated_at": datetime.now().isoformat()
+        }}
+    )
+    
+    return {"message": "帳本已更新"}
+
+# [Ledgers] Delete ledger (only owner)
+@app.delete("/api/ledgers/{ledger_id}")
+def delete_ledger(ledger_id: str, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    
+    existing = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+    if not existing:
+        raise HTTPException(status_code=404, detail="帳本不存在")
+    
+    # Only owner can delete
+    if existing.get("owner_id") != user_id:
+        raise HTTPException(status_code=403, detail="只有帳本擁有者可以刪除")
+    
+    # Delete the ledger
+    ledgers_collection.delete_one({"_id": ObjectId(ledger_id)})
+    
+    # Optionally: delete all transactions in this ledger
+    # collection.delete_many({"ledger_id": ledger_id})
+    
+    return {"message": "帳本已刪除"}
+
+# [Ledgers] Get members of a ledger
+@app.get("/api/ledgers/{ledger_id}/members")
+def get_ledger_members(ledger_id: str, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    
+    ledger = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+    if not ledger:
+        raise HTTPException(status_code=404, detail="帳本不存在")
+    
+    # Check if user is a member
+    if user_id not in ledger.get("members", []):
+        raise HTTPException(status_code=403, detail="您不是此帳本的成員")
+    
+    # Get member details
+    member_ids = ledger.get("members", [])
+    members = []
+    for member_id in member_ids:
+        user = users_collection.find_one({"_id": ObjectId(member_id)})
+        if user:
+            members.append({
+                "id": str(user["_id"]),
+                "username": user.get("username"),
+                "display_name": user.get("display_name"),
+                "is_owner": member_id == ledger.get("owner_id")
+            })
+    
+    return members
+
+# [Ledgers] Remove member (only owner)
+@app.delete("/api/ledgers/{ledger_id}/members/{member_id}")
+def remove_ledger_member(ledger_id: str, member_id: str, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    
+    ledger = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+    if not ledger:
+        raise HTTPException(status_code=404, detail="帳本不存在")
+    
+    # Only owner can remove members
+    if ledger.get("owner_id") != user_id:
+        raise HTTPException(status_code=403, detail="只有帳本擁有者可以移除成員")
+    
+    # Cannot remove owner
+    if member_id == ledger.get("owner_id"):
+        raise HTTPException(status_code=400, detail="無法移除帳本擁有者")
+    
+    # Remove member
+    ledgers_collection.update_one(
+        {"_id": ObjectId(ledger_id)},
+        {"$pull": {"members": member_id}}
+    )
+    
+    return {"message": "成員已移除"}
+
+
+# ============================================================
+# Invite System
+# ============================================================
+
+class InviteCreate(BaseModel):
+    ledger_id: str
+    expires_days: Optional[int] = 7  # Default 7 days
+
+# [Invite] Generate invite code for ledger
+@app.post("/api/ledgers/{ledger_id}/invite")
+def create_invite(ledger_id: str, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    
+    # Verify ledger exists and user is owner or member
+    ledger = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+    if not ledger:
+        raise HTTPException(status_code=404, detail="帳本不存在")
+    
+    if user_id not in ledger.get("members", []):
+        raise HTTPException(status_code=403, detail="您不是此帳本的成員")
+    
+    # Generate random invite code (6 characters)
+    import random
+    import string
+    code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    
+    # Check if code already exists (rare but possible)
+    while invites_collection.find_one({"code": code}):
+        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    
+    # Create invite
+    expires_at = datetime.now() + timedelta(days=7)
+    invite = {
+        "code": code,
+        "ledger_id": ledger_id,
+        "created_by": user_id,
+        "expires_at": expires_at.isoformat(),
+        "created_at": datetime.now().isoformat()
+    }
+    
+    invites_collection.insert_one(invite)
+    
+    return {
+        "code": code,
+        "expires_at": expires_at.isoformat(),
+        "message": "邀請碼已產生"
+    }
+
+# [Invite] Accept invite code
+@app.post("/api/invite/accept")
+def accept_invite(request: InviteCodeRequest, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    code = request.code.strip().upper()
+    
+    # Find invite
+    invite = invites_collection.find_one({"code": code})
+    if not invite:
+        raise HTTPException(status_code=404, detail="邀請碼不存在或已失效")
+    
+    # Check if expired
+    expires_at = datetime.fromisoformat(invite["expires_at"])
+    if datetime.now() > expires_at:
+        # Delete expired invite
+        invites_collection.delete_one({"_id": invite["_id"]})
+        raise HTTPException(status_code=400, detail="邀請碼已過期")
+    
+    # Get ledger
+    ledger_id = invite["ledger_id"]
+    ledger = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+    if not ledger:
+        raise HTTPException(status_code=404, detail="帳本不存在")
+    
+    # Check if user is already a member
+    if user_id in ledger.get("members", []):
+        return {
+            "message": "您已經是此帳本的成員",
+            "ledger_id": ledger_id
+        }
+    
+    # Add user to ledger members
+    ledgers_collection.update_one(
+        {"_id": ObjectId(ledger_id)},
+        {"$push": {"members": user_id}}
+    )
+    
+    # Optionally: delete the invite code after use (one-time use)
+    # invites_collection.delete_one({"_id": invite["_id"]})
+    
+    return {
+        "message": f"已成功加入帳本：{ledger.get('name', '未命名')}",
+        "ledger_id": ledger_id,
+        "ledger_name": ledger.get("name", "未命名")
+    }
+
+# [Invite] Get all invites for a ledger (owner only)
+@app.get("/api/ledgers/{ledger_id}/invites")
+def get_ledger_invites(ledger_id: str, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    
+    ledger = ledgers_collection.find_one({"_id": ObjectId(ledger_id)})
+    if not ledger:
+        raise HTTPException(status_code=404, detail="帳本不存在")
+    
+    # Only owner can view invites
+    if ledger.get("owner_id") != user_id:
+        raise HTTPException(status_code=403, detail="只有帳本擁有者可以查看邀請碼")
+    
+    # Get active invites
+    invites = list(invites_collection.find({
+        "ledger_id": ledger_id,
+        "expires_at": {"$gt": datetime.now().isoformat()}
+    }))
+    
+    return [fix_id(invite) for invite in invites]
+
+# [Invite] Delete/revoke invite
+@app.delete("/api/invites/{invite_id}")
+def delete_invite(invite_id: str, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    
+    invite = invites_collection.find_one({"_id": ObjectId(invite_id)})
+    if not invite:
+        raise HTTPException(status_code=404, detail="邀請碼不存在")
+    
+    # Check if user is the creator or ledger owner
+    ledger = ledgers_collection.find_one({"_id": ObjectId(invite["ledger_id"])})
+    if not ledger or (invite["created_by"] != user_id and ledger.get("owner_id") != user_id):
+        raise HTTPException(status_code=403, detail="您無權刪除此邀請碼")
+    
+    invites_collection.delete_one({"_id": ObjectId(invite_id)})
+    return {"message": "邀請碼已刪除"}
