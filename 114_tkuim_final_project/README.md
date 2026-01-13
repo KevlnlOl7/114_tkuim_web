@@ -171,6 +171,10 @@ npm run dev
 5. **查看報表**: 點擊頂部的圖表切換至統計視圖。
 
 ---
+## API文件
+1. Swagger UI: http://localhost:8000/docs
+2. ReDoc: http://localhost:8000/redoc
+
 
 ## 單元測試
 ```bash
@@ -191,4 +195,4 @@ python test/-v
 - ✅ **匯出優化**: 匯出的 Excel 表格現在包含「記帳人」欄位。
 
 ---
-Developed by 114 TKUIM Team.
+Developed by Kevin.
