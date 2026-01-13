@@ -25,6 +25,10 @@ PyMoney 是一個現代化的全功能記帳應用程式，專為個人與家庭
 
 ---
 
+## Demo 影片
+
+影片連結：https://youtu.be/FbvE-2iNmOQ
+
 ## 🛠️ 技術架構與流程 (Architecture & Flow)
 
 ### 1. 系統架構圖 (Architecture Diagram)
