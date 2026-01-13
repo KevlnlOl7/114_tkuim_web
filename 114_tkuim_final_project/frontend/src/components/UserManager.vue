@@ -61,7 +61,7 @@ const fetchUsers = async () => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${user.token}`
       }
     }
-    const res = await axios.get('http://127.0.0.1:8000/api/users')
+    const res = await axios.get('/api/users')
     users.value = res.data
   } catch (err) {
     console.error('Load users failed:', err)
@@ -76,7 +76,7 @@ const handleRemove = async (user) => {
   if (!confirm(t('confirm_remove_member', { name: user.display_name }))) return
   isLoading.value = true
   try {
-    await axios.post(`http://127.0.0.1:8000/api/family/remove-member?admin_id=${props.currentUser.id}&member_id=${user.id}`)
+    await axios.post(`/api/family/remove-member?admin_id=${props.currentUser.id}&member_id=${user.id}`)
     alert(t('member_removed', { name: user.display_name }))
     await fetchUsers()
     emit('refresh-user')

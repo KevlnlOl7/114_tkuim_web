@@ -24,7 +24,7 @@ const newTemplate = ref({
 
 const fetchTemplates = async () => {
   try {
-    let url = 'http://127.0.0.1:8000/api/templates'
+    let url = '/api/templates'
     if (props.currentUser) {
       url += `?user_id=${props.currentUser.id}`
     }
@@ -37,7 +37,7 @@ const fetchTemplates = async () => {
 
 const addTemplate = async () => {
   if (!newTemplate.value.name || !newTemplate.value.title || !newTemplate.value.amount) {
-    alert('請填寫完整資訊')
+    alert(t('fill_all_required'))
     return
   }
   try {
@@ -45,22 +45,22 @@ const addTemplate = async () => {
       ...newTemplate.value,
       user_id: props.currentUser?.id
     }
-    await axios.post('http://127.0.0.1:8000/api/templates', payload)
+    await axios.post('/api/templates', payload)
     showAddModal.value = false
     newTemplate.value = { name: '', title: '', amount: 0, category: 'Food', type: 'expense', payment_method: 'Cash', note: '' }
     fetchTemplates()
   } catch (err) {
-    alert('建立模板失敗')
+    alert(t('add_failed'))
   }
 }
 
 const deleteTemplate = async (id) => {
-  if (!confirm('確定要刪除這個模板嗎？')) return
+  if (!confirm(t('delete_template_confirm') || 'Delete this template?')) return
   try {
-    await axios.delete(`http://127.0.0.1:8000/api/templates/${id}`)
+    await axios.delete(`/api/templates/${id}`)
     fetchTemplates()
   } catch (err) {
-    alert('刪除失敗')
+    alert(t('delete_failed'))
   }
 }
 

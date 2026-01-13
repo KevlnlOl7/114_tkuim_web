@@ -62,7 +62,8 @@ const getDay = (dateStr) => {
 const formatDateBadge = (dateStr) => {
   const date = new Date(dateStr)
   if (isNaN(date.getTime())) return ''
-  return date.toLocaleString(currentLocale.value, { month: 'short' })
+  // Show Year and Month (e.g., 2024/01)
+  return date.toLocaleString(currentLocale.value, { year: 'numeric', month: 'numeric' })
 }
 </script>
 
@@ -85,10 +86,10 @@ const formatDateBadge = (dateStr) => {
       
       <div class="sort-box">
         <select v-model="sortBy" class="sort-select">
-          <option value="date_desc">📅 日期 (新→舊)</option>
-          <option value="date_asc">📅 日期 (舊→新)</option>
-          <option value="amount_desc">💰 金額 (大→小)</option>
-          <option value="amount_asc">💰 金額 (小→大)</option>
+          <option value="date_desc">{{ t('sort_date_desc') }}</option>
+          <option value="date_asc">{{ t('sort_date_asc') }}</option>
+          <option value="amount_desc">{{ t('sort_amount_desc') }}</option>
+          <option value="amount_asc">{{ t('sort_amount_asc') }}</option>
         </select>
       </div>
       <div class="date-range">

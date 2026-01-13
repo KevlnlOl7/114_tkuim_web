@@ -35,7 +35,7 @@ const addCategory = async () => {
   if (!newCat.value.name) return alert(t('input_name_hint'))
   
   try {
-    await axios.post('http://127.0.0.1:8000/api/categories', {
+    await axios.post('/api/categories', {
       ...newCat.value,
       type: activeTab.value,
       user_id: props.currentUser ? props.currentUser.id : null
@@ -51,7 +51,7 @@ const addCategory = async () => {
 const deleteCategory = async (id) => {
   if (!confirm(t('delete_confirm_cat'))) return
   try {
-    await axios.delete(`http://127.0.0.1:8000/api/categories/${id}`)
+    await axios.delete(`/api/categories/${id}`)
     emit('updated')
   } catch (err) {
     alert(t('delete_failed'))

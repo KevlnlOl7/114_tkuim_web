@@ -12,6 +12,9 @@ import TransactionList from './components/TransactionList.vue'
 import AssetsDashboard from './components/AssetsDashboard.vue'
 import StatsPanel from './components/StatsPanel.vue'
 import QuickEntry from './components/QuickEntry.vue'
+import CategoryBudgetPanel from './components/CategoryBudgetPanel.vue'
+import RecurringManager from './components/RecurringManager.vue'
+import LanguageSelector from './components/LanguageSelector.vue'
 import { t, currentLocale, setLocale } from './i18n.js'
 
 // --- Auth State ---
@@ -94,6 +97,15 @@ const familyAdminName = ref('') // Store admin name for i18n
 const selectedUserIds = ref([]) // Multi-select: array of user IDs
 let pollingInterval = null
 
+// --- Toast Notification ---
+const toast = ref({ show: false, message: '', type: 'info' })
+const showToast = (msg, type = 'info') => {
+  toast.value = { show: true, message: msg, type }
+  setTimeout(() => {
+    toast.value.show = false
+  }, 3000)
+}
+
 // --- Auth Functions ---
 const checkLoginStatus = () => {
   isLoggedIn.value = localStorage.getItem('isLoggedIn') === 'true'
@@ -132,12 +144,12 @@ const fetchData = async () => {
   try {
     const filterQuery = getFilterQuery()
     
-    const listRes = await axios.get(`http://127.0.0.1:8000/api/transactions${filterQuery}`)
+    const listRes = await axios.get(`/api/transactions${filterQuery}`)
     transactions.value = listRes.data 
 
     await fetchStats()
     
-    const budgetRes = await axios.get('http://127.0.0.1:8000/api/budget')
+    const budgetRes = await axios.get('/api/budget')
     budgetLimit.value = budgetRes.data.limit
     
     await fetchCategories()
@@ -172,9 +184,9 @@ const fetchStats = async () => {
     const query = getFilterQuery()
     
     const [statRes, trendRes, accountRes] = await Promise.all([
-      axios.get(`http://127.0.0.1:8000/api/dashboard/stats${query}`),
-      axios.get(`http://127.0.0.1:8000/api/dashboard/trend${query}`),
-      axios.get(`http://127.0.0.1:8000/api/dashboard/accounts${query}`)
+      axios.get(`/api/dashboard/stats${query}`),
+      axios.get(`/api/dashboard/trend${query}`),
+      axios.get(`/api/dashboard/accounts${query}`)
     ])
 
     stats.value = statRes.data
@@ -189,7 +201,7 @@ const fetchStats = async () => {
 
 const fetchCategories = async () => {
   try {
-    let url = 'http://127.0.0.1:8000/api/categories'
+    let url = '/api/categories'
     if (currentUser.value) url += `?user_id=${currentUser.value.id}`
     const res = await axios.get(url)
     categories.value = res.data
@@ -198,7 +210,7 @@ const fetchCategories = async () => {
 
 const fetchPaymentMethods = async () => {
   try {
-    let url = 'http://127.0.0.1:8000/api/payment-methods'
+    let url = '/api/payment-methods'
     if (currentUser.value) url += `?user_id=${currentUser.value.id}`
     const res = await axios.get(url)
     paymentMethods.value = res.data
@@ -216,25 +228,31 @@ const handleSubmit = async () => {
   }
   try {
     if (isEditing.value) {
-      await axios.put(`http://127.0.0.1:8000/api/transactions/${editId.value}`, payload)
+      await axios.put(`/api/transactions/${editId.value}`, payload)
       cancelEdit()
     } else {
-      await axios.post('http://127.0.0.1:8000/api/transactions', payload)
+      await axios.post('/api/transactions', payload)
       resetForm()
     }
     fetchData()
   } catch (error) { 
     const detail = error.response?.data?.detail
     const msg = Array.isArray(detail) ? detail[0]?.msg : detail
-    alert(t('op_failed') + (msg ? ': ' + msg : ''))
+    showToast(t('op_failed') + (msg ? ': ' + msg : ''), 'error')
     console.error("Operation failed", error)
   }
 }
 
 const removeTransaction = async (id) => {
-  if (!confirm("確定要刪除嗎？")) return
-  await axios.delete(`http://127.0.0.1:8000/api/transactions/${id}`)
-  fetchData()
+  if (!confirm(t('confirm_delete'))) return
+  try {
+    await axios.delete(`/api/transactions/${id}`)
+    showToast(t('delete_success') || '已刪除', 'success')
+    fetchData()
+  } catch (error) {
+    showToast(t('op_failed') || '刪除失敗', 'error')
+    console.error(error)
+  }
 }
 
 const startEdit = (item) => {
@@ -306,22 +324,23 @@ const scrollToForm = () => {
 // --- Budget ---
 const saveBudget = async (amount) => {
   try {
-    await axios.post('http://127.0.0.1:8000/api/budget', { limit: amount })
+    await axios.post('/api/budget', { limit: amount })
     budgetLimit.value = amount
-    alert("預算設定成功！")
-  } catch (error) { alert("設定失敗") }
+    showToast("預算設定成功！", 'success')
+  } catch (error) { showToast("設定失敗", 'error') }
 }
 
 // --- Import/Export ---
 const exportExcel = async () => { 
   if (transactions.value.length < 1) {
     const msg = t('no_data_to_export') || '無資料可匯出，請先新增交易紀錄'
-    console.log('Export check failed:', msg)
-    alert(msg)
+
+
+    showToast(msg, 'info')
     return
   }
   try {
-    const res = await axios.get('http://127.0.0.1:8000/api/export', {
+    const res = await axios.get('/api/export', {
       responseType: 'blob'
     })
     // 建立 Blob 下載連結
@@ -334,26 +353,26 @@ const exportExcel = async () => {
     link.remove()
     window.URL.revokeObjectURL(url)
   } catch (error) {
-    alert('匯出失敗：' + (error.response?.data?.detail || error.message))
+    showToast('匯出失敗：' + (error.response?.data?.detail || error.message), 'error')
   }
 }
 
 const downloadSample = async () => {
   try {
-    const res = await axios.get('http://127.0.0.1:8000/api/import/sample', {
-      params: { format: 'csv' },
+    const res = await axios.get('/api/import/sample', {
+      params: { format: 'xlsx' },
       responseType: 'blob'
     })
     const url = window.URL.createObjectURL(new Blob([res.data]))
     const link = document.createElement('a')
     link.href = url
-    link.setAttribute('download', 'PyMoney_Import_Sample.csv')
+    link.setAttribute('download', 'PyMoney_Import_Sample.xlsx')
     document.body.appendChild(link)
     link.click()
     link.remove()
     window.URL.revokeObjectURL(url)
   } catch (error) {
-    alert('下載範例失敗：' + (error.response?.data?.detail || error.message))
+    showToast('下載範例失敗：' + (error.response?.data?.detail || error.message), 'error')
   }
 }
 
@@ -361,13 +380,13 @@ const handleImport = async (file) => {
   const formData = new FormData()
   formData.append('file', file)
   try {
-    const res = await axios.post('http://127.0.0.1:8000/api/import', formData, {
+    const res = await axios.post('/api/import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
-    alert(res.data.message)
+    showToast(res.data.message, 'success')
     fetchData()
   } catch (error) {
-    alert("匯入失敗：" + (error.response?.data?.detail || error.message))
+    showToast("匯入失敗：" + (error.response?.data?.detail || error.message), 'error')
   }
 }
 
@@ -407,18 +426,30 @@ const monthlyExpense = computed(() => {
     .reduce((sum, item) => sum + item.amount, 0)
 })
 
+const monthlyIncome = computed(() => {
+  const now = new Date()
+  const currentMonth = now.toISOString().slice(0, 7)
+  return transactions.value
+    .filter(item => item.type === 'income' && item.date.startsWith(currentMonth))
+    .reduce((sum, item) => sum + item.amount, 0)
+})
+
+const monthlyBalance = computed(() => {
+  return monthlyIncome.value - monthlyExpense.value
+})
+
 // --- Family Functions ---
 const generateInviteCode = async () => {
   if (!currentUser.value) return
   inviteLoading.value = true
   try {
-    const res = await axios.post(`http://127.0.0.1:8000/api/invite/generate?user_id=${currentUser.value.id}`)
+    const res = await axios.post(`/api/invite/generate?user_id=${currentUser.value.id}`)
     inviteCode.value = res.data.code
     inviteExpires.value = res.data.expires_at
     showInviteModal.value = true
     startFamilyPolling()
   } catch (err) {
-    alert('產生邀請碼失敗')
+    showToast('產生邀請碼失敗', 'error')
   } finally {
     inviteLoading.value = false
   }
@@ -427,7 +458,7 @@ const generateInviteCode = async () => {
 const startFamilyPolling = () => {
   pollingInterval = setInterval(async () => {
     try {
-      const res = await axios.get(`http://127.0.0.1:8000/api/users/${currentUser.value.id}`)
+      const res = await axios.get(`/api/users/${currentUser.value.id}`)
       if (res.data.family_id) {
         currentUser.value.family_id = res.data.family_id
         localStorage.setItem('user', JSON.stringify(currentUser.value))
@@ -436,7 +467,7 @@ const startFamilyPolling = () => {
         fetchFamilyMembers()
       }
     } catch (err) {
-      console.log('檢查狀態失敗')
+        // Silently fail polling check
     }
   }, 3000)
 }
@@ -451,7 +482,7 @@ const stopFamilyPolling = () => {
 const refreshUser = async () => {
   if (!currentUser.value) return
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/users/${currentUser.value.id}`)
+    const res = await axios.get(`/api/users/${currentUser.value.id}`)
     if (res.data) {
       const oldFamilyId = currentUser.value.family_id
       currentUser.value = { ...currentUser.value, ...res.data }
@@ -474,7 +505,7 @@ const acceptInviteCode = async () => {
   if (!currentUser.value || !joinCode.value) return
   try {
     const res = await axios.post(
-      `http://127.0.0.1:8000/api/invite/accept?admin_id=${currentUser.value.id}`,
+      `/api/invite/accept?admin_id=${currentUser.value.id}`,
       { code: joinCode.value }
     )
     joinMessage.value = res.data.message
@@ -492,38 +523,38 @@ const acceptInviteCode = async () => {
 const fetchFamilyMembers = async () => {
   if (!currentUser.value?.family_id) return
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/family/members/${currentUser.value.family_id}`)
+    const res = await axios.get(`/api/family/members/${currentUser.value.family_id}`)
     familyMembers.value = res.data.members
     familyName.value = res.data.family_name
     familyAdminName.value = res.data.admin_name || ''
   } catch (err) {
-    console.log('尚未加入家庭或無成員')
+    // No family members or not in family
   }
 }
 
 const leaveFamily = async () => {
-  if (!confirm('確定要離開這個家庭嗎？')) return
+  if (!confirm(t('leave_family_confirm') || 'Are you sure you want to leave this family?')) return
   try {
-    await axios.post(`http://127.0.0.1:8000/api/family/leave?user_id=${currentUser.value.id}`)
-    alert('已離開家庭')
+    await axios.post(`/api/family/leave?user_id=${currentUser.value.id}`)
+    showToast('已離開家庭', 'success')
     currentUser.value.family_id = null
     localStorage.setItem('user', JSON.stringify(currentUser.value))
     familyMembers.value = []
     familyName.value = ''
     selectedUserIds.value = [] // Clear filter state
   } catch (err) {
-    alert(err.response?.data?.detail || '離開失敗')
+    showToast(err.response?.data?.detail || '離開失敗', 'error')
   }
 }
 
 const removeMember = async (memberId, memberName) => {
-  if (!confirm(`確定要將 ${memberName} 移出家庭嗎？`)) return
+  if (!confirm(t('confirm_remove_member', { name: memberName }))) return
   try {
-    await axios.post(`http://127.0.0.1:8000/api/family/remove-member?admin_id=${currentUser.value.id}&member_id=${memberId}`)
-    alert(`已將 ${memberName} 移出家庭`)
+    await axios.post(`/api/family/remove-member?admin_id=${currentUser.value.id}&member_id=${memberId}`)
+    showToast(`已將 ${memberName} 移出家庭`, 'success')
     await fetchFamilyMembers()
   } catch (err) {
-    alert(err.response?.data?.detail || '移除失敗')
+    showToast(err.response?.data?.detail || '移除失敗', 'error')
   }
 }
 
@@ -544,7 +575,7 @@ const handleResetPassword = async () => {
   }
   resetLoading.value = true
   try {
-    const res = await axios.post('http://127.0.0.1:8000/api/auth/reset-password', {
+    const res = await axios.post('/api/auth/reset-password', {
       token: pendingResetToken.value,
       new_password: newPassword.value
     })
@@ -593,7 +624,7 @@ const handleUpdatePassword = async () => {
   pwMessage.value = ''
   
   try {
-    await axios.post('http://127.0.0.1:8000/api/users/change-password', {
+    await axios.post('/api/users/change-password', {
       old_password: oldPassword.value,
       new_password: newPassword2.value
     })
@@ -635,7 +666,7 @@ onMounted(() => {
     setInterval(async () => {
       if (currentUser.value && isLoggedIn.value) {
         try {
-          const res = await axios.get(`http://127.0.0.1:8000/api/users/${currentUser.value.id}`)
+          const res = await axios.get(`/api/users/${currentUser.value.id}`)
           if (res.data) {
             const oldFamilyId = currentUser.value.family_id
             const newFamilyId = res.data.family_id
@@ -698,6 +729,13 @@ onMounted(() => {
       <span class="loading-text">載入中...</span>
     </div>
     
+    <!-- Toast Notification -->
+    <Transition name="toast">
+      <div v-if="toast.show" class="toast-notification" :class="toast.type">
+        {{ toast.message }}
+      </div>
+    </Transition>
+
     <div class="container">
       <div class="app-header">
         <div class="header-left">
@@ -708,15 +746,7 @@ onMounted(() => {
           </span>
         </div>
         <div class="header-actions">
-          <select v-model="currentLocale" @change="setLocale(currentLocale)" class="lang-select">
-            <option value="zh-TW">🇹🇼 中文</option>
-            <option value="en-US">🇺🇸 English</option>
-            <option value="ja">🇯🇵 日本語</option>
-            <option value="ko">🇰🇷 한국어</option>
-            <option value="vi">🇻🇳 Tiếng Việt</option>
-            <option value="id">🇮🇩 Bahasa Ind</option>
-            <option value="tl">🇵🇭 Filipino</option>
-          </select>
+          <LanguageSelector />
           <button @click="toggleTheme" class="btn-theme" :title="isDarkMode ? 'Light Mode' : 'Dark Mode'">{{ isDarkMode ? '☀️' : '🌙' }}</button>
           <button v-if="currentUser" @click="showChangePasswordModal = true" class="btn-theme" title="修改密碼">🔑</button>
           <button v-if="currentUser?.role === 'user'" @click="generateInviteCode" class="btn-invite" :disabled="inviteLoading">
@@ -787,6 +817,21 @@ onMounted(() => {
           <div class="family-text">
             <span class="family-label">{{ t('joined_family') }}</span>
             <span class="family-name">{{ displayFamilyName }}</span>
+          </div>
+        </div>
+        <!-- Monthly Stats Section -->
+        <div class="monthly-stats-mini">
+          <div class="stat-item income">
+            <span class="stat-label">{{ t('income') }}</span>
+            <span class="stat-value">+{{ monthlyIncome.toLocaleString() }}</span>
+          </div>
+          <div class="stat-item expense">
+            <span class="stat-label">{{ t('expense') }}</span>
+            <span class="stat-value">-{{ monthlyExpense.toLocaleString() }}</span>
+          </div>
+          <div class="stat-item balance" :class="{ positive: monthlyBalance >= 0, negative: monthlyBalance < 0 }">
+            <span class="stat-label">{{ t('balance') || '結餘' }}</span>
+            <span class="stat-value">{{ monthlyBalance >= 0 ? '+' : '' }}{{ monthlyBalance.toLocaleString() }}</span>
           </div>
         </div>
         <button @click="leaveFamily" class="btn-leave">🚪 {{ t('leave') }}</button>
@@ -861,10 +906,30 @@ onMounted(() => {
         :totalAmount="totalAmount"
         :categories="categories"
         :transactions="transactions"
+        :isDarkMode="isDarkMode"
         @update-budget="saveBudget"
         @import="handleImport"
         @export="exportExcel"
         @download-sample="downloadSample"
+        @show-toast="showToast"
+      />
+
+      <!-- Category Budget Panel -->
+      <CategoryBudgetPanel
+        v-if="currentUser"
+        :currentUser="currentUser"
+        :categories="categories"
+        @show-toast="showToast"
+      />
+
+      <!-- Recurring Transactions Manager -->
+      <RecurringManager
+        v-if="currentUser"
+        :currentUser="currentUser"
+        :categories="categories"
+        :paymentMethods="paymentMethods"
+        @show-toast="showToast"
+        @refresh-data="fetchData"
       />
 
       <!-- Quick Entry Templates -->
@@ -880,6 +945,7 @@ onMounted(() => {
         v-model:form="form"
         v-model:rateUpdatedAt="rateUpdatedAt"
         :categories="categories"
+        :paymentMethods="paymentMethods"
         :isEditing="isEditing"
         @submit="handleSubmit"
         @cancel="cancelEdit"
@@ -1149,6 +1215,38 @@ body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
 }
 .checkbox-badge { font-size: 0.7rem; }
 
+/* Monthly Stats Mini Display */
+.monthly-stats-mini {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 12px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 10px;
+}
+.monthly-stats-mini .stat-item {
+  flex: 1;
+  text-align: center;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.3);
+}
+.monthly-stats-mini .stat-label {
+  display: block;
+  font-size: 0.7rem;
+  color: rgba(0,0,0,0.6);
+  margin-bottom: 4px;
+}
+.monthly-stats-mini .stat-value {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.monthly-stats-mini .stat-item.income .stat-value { color: #00b894; }
+.monthly-stats-mini .stat-item.expense .stat-value { color: #d63031; }
+.monthly-stats-mini .stat-item.balance.positive .stat-value { color: #00b894; }
+.monthly-stats-mini .stat-item.balance.negative .stat-value { color: #d63031; }
+
 /* Responsive */
 @media (max-width: 600px) {
   .app-header { flex-direction: column; align-items: flex-start; }
@@ -1164,6 +1262,29 @@ body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
 :global(.dark) .invite-code-display { background: #2d3748; color: #00b894; }
 :global(.dark) .invite-hint { color: #a0a0a0; }
 :global(.dark) .invite-input { background: #2d3748; color: #e0e0e0; border-color: #4a5568; }
+:global(.dark) .date-range input { background: #2d3748; color: #e0e0e0; }
+
+/* Toast Styles */
+.toast-notification {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  padding: 15px 25px;
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  z-index: 99999;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.95;
+}
+.toast-notification.success { background: #2ecc71; }
+.toast-notification.error { background: #e74c3c; }
+.toast-notification.info { background: #3498db; }
+.toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
+.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-20px); }
 :global(.dark) .btn-theme { background: #2d3748; }
 :global(.dark) .lang-select { background-color: #2d3748; border-color: #4a5568; color: #fff; }
 :global(.dark) .family-card.user { background: linear-gradient(135deg, #4a3f35 0%, #6d4c41 100%); }

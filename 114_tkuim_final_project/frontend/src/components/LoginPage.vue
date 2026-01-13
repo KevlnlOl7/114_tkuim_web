@@ -1,7 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import axios from 'axios'
-import { t, currentLocale, setLocale } from '../i18n'
+import { t } from '../i18n'
+import LanguageSelector from './LanguageSelector.vue'
 
 const username = ref('')
 const password = ref('')
@@ -35,7 +36,7 @@ const handleLogin = async () => {
   error.value = ''
   
   try {
-    const res = await axios.post('http://127.0.0.1:8000/api/auth/login', {
+    const res = await axios.post('/api/auth/login', {
       username: username.value,
       password: password.value
     })
@@ -79,7 +80,7 @@ const handleForgotPassword = async () => {
   forgotMessage.value = ''
   
   try {
-    await axios.post('http://127.0.0.1:8000/api/auth/forgot-password', {
+    await axios.post('/api/auth/forgot-password', {
       email: forgotEmail.value
     })
     // 強制使用翻譯的成功訊息
@@ -110,15 +111,7 @@ const handleKeyup = (e) => {
   <div class="login-container">
     <div class="login-card">
       <div class="lang-switch-container">
-        <select v-model="currentLocale" @change="setLocale(currentLocale)" class="lang-select-small">
-          <option value="zh-TW">🇹🇼 中文</option>
-          <option value="en-US">🇺🇸 English</option>
-          <option value="ja">🇯🇵 日本語</option>
-          <option value="ko">🇰🇷 한국어</option>
-          <option value="vi">🇻🇳 Tiếng Việt</option>
-          <option value="id">🇮🇩 Bahasa Ind</option>
-          <option value="tl">🇵🇭 Filipino</option>
-        </select>
+        <LanguageSelector variant="small" />
       </div>
 
       <div class="login-header">
@@ -136,6 +129,8 @@ const handleKeyup = (e) => {
             :placeholder="t('login_input_username_ph')" 
             @keyup="handleKeyup"
             :disabled="isLoading"
+            aria-label="Username"
+            autocomplete="username"
           />
         </div>
         
@@ -147,6 +142,8 @@ const handleKeyup = (e) => {
             :placeholder="t('login_input_password_ph')" 
             @keyup="handleKeyup"
             :disabled="isLoading"
+            aria-label="Password"
+            autocomplete="current-password"
           />
         </div>
         

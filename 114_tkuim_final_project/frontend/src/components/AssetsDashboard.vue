@@ -18,7 +18,7 @@ const fetchBalances = async () => {
   if (!props.currentUser) return
   loading.value = true
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/dashboard/accounts?user_id=${props.currentUser.id}`)
+    const res = await axios.get(`/api/dashboard/accounts?user_id=${props.currentUser.id}`)
     accountBalances.value = res.data
   } catch (err) {
     console.error(err)
@@ -88,11 +88,11 @@ defineExpose({ fetchBalances })
     <div v-else>
         <div class="summary-cards">
         <div class="card asset-card">
-            <label>總資產 (Assets)</label>
+            <label>{{ t('total_assets') }}</label>
             <div class="val positive">+{{ positiveAssets.toLocaleString() }}</div>
         </div>
         <div class="card liability-card">
-            <label>總負債 (Liabilities)</label>
+            <label>{{ t('total_liabilities') }}</label>
             <!-- Liabilities usually shown as negative in calculation but absolute for display? -->
             <!-- If balance is negative, it's debt. -->
             <div class="val negative">{{ negativeLiabilities.toLocaleString() }}</div>

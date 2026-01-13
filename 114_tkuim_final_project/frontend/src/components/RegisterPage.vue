@@ -1,7 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import axios from 'axios'
-import { t, currentLocale, setLocale } from '../i18n'
+import { t } from '../i18n'
+import LanguageSelector from './LanguageSelector.vue'
 
 const username = ref('')
 const password = ref('')
@@ -51,15 +52,25 @@ const handleRegister = async () => {
     return
   }
   
-  if (password.value.length < 4) {
-    error.value = t('password_too_short')
+  // Password strength validation: 8+ chars, upper, lower, number
+  if (password.value.length < 8) {
+    error.value = t('password_min_length') || 'Password must be at least 8 characters'
+    return
+  }
+  
+  const hasUpperCase = /[A-Z]/.test(password.value)
+  const hasLowerCase = /[a-z]/.test(password.value)
+  const hasNumber = /[0-9]/.test(password.value)
+  
+  if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+    error.value = t('password_complexity') || 'Password must contain uppercase, lowercase, and number'
     return
   }
   
   isLoading.value = true
   
   try {
-    const res = await axios.post('http://127.0.0.1:8000/api/auth/register', {
+    const res = await axios.post('/api/auth/register', {
       username: username.value,
       password: password.value,
       display_name: displayName.value,
@@ -91,15 +102,7 @@ const handleRegister = async () => {
   <div class="register-container">
     <div class="register-card">
       <div class="lang-switch-container">
-        <select v-model="currentLocale" @change="setLocale(currentLocale)" class="lang-select-small">
-          <option value="zh-TW">🇹🇼 中文</option>
-          <option value="en-US">🇺🇸 English</option>
-          <option value="ja">🇯🇵 日本語</option>
-          <option value="ko">🇰🇷 한국어</option>
-          <option value="vi">🇻🇳 Tiếng Việt</option>
-          <option value="id">🇮🇩 Bahasa Ind</option>
-          <option value="tl">🇵🇭 Filipino</option>
-        </select>
+        <LanguageSelector variant="small" />
       </div>
 
       <div class="register-header">

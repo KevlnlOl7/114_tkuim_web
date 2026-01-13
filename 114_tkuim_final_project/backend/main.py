@@ -26,7 +26,27 @@ from pathlib import Path
 env_path = Path(__file__).parent / '.env'
 load_dotenv(env_path)
 
-app = FastAPI()
+app = FastAPI(
+    title="PyMoney API",
+    description="""
+    ## PyMoney 家庭記帳 API
+    
+    ### Features:
+    - 🔐 **Authentication**: 使用者登入/註冊/密碼重設
+    - 💰 **Transactions**: 收支記錄 CRUD 操作
+    - 👨‍👩‍👧 **Family**: 家庭成員管理
+    - 📊 **Categories**: 分類與預算管理
+    - 📱 **Templates**: 快速記帳模板
+    
+    ### Docs:
+    - `/docs` - Swagger UI (interactive)
+    - `/redoc` - ReDoc (documentation)
+    """,
+    version="1.0.0",
+    contact={
+        "name": "PyMoney Team",
+    },
+)
 
 @app.on_event("startup")
 def init_db():
@@ -54,6 +74,10 @@ def init_db():
         ]
         payment_methods_collection.insert_many(default_methods)
         print(f"✅ Inserted {len(default_methods)} default payment methods")
+    
+    # Create MongoDB indexes for query optimization
+    from database import create_indexes
+    create_indexes()
     
     init_default_admin()
 
@@ -355,8 +379,17 @@ def self_register(request: RegisterRequest):
     if len(request.username) < 3:
         raise HTTPException(status_code=400, detail="帳號長度需至少 3 個字元")
     
-    if len(request.password) < 4:
-        raise HTTPException(status_code=400, detail="密碼太短")
+    # Password strength: 8+ chars, upper, lower, number
+    if len(request.password) < 8:
+        raise HTTPException(status_code=400, detail="密碼長度至少需要 8 個字元")
+    
+    import re as regex_module
+    if not regex_module.search(r'[A-Z]', request.password):
+        raise HTTPException(status_code=400, detail="密碼必須包含大寫字母")
+    if not regex_module.search(r'[a-z]', request.password):
+        raise HTTPException(status_code=400, detail="密碼必須包含小寫字母")
+    if not regex_module.search(r'[0-9]', request.password):
+        raise HTTPException(status_code=400, detail="密碼必須包含數字")
         
     email_regex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
     if not re.match(email_regex, request.email):
@@ -864,7 +897,7 @@ def get_trend_stats(user_id: Optional[str] = None, user_ids: Optional[str] = Non
     ]
     result = list(collection.aggregate(pipeline))
     return {
-        "dates": [item["_id"] for item in result],
+        "labels": [item["_id"] for item in result],
         "incomes": [item["income"] for item in result],
         "expenses": [item["expense"] for item in result]
     }
@@ -891,6 +924,8 @@ def set_budget(budget: BudgetSetting):
 
 
 # [匯出] Excel
+from fastapi.responses import StreamingResponse
+
 @app.get("/api/export")
 def export_excel(current_user: dict = Depends(get_current_user)):
     # Export only the current user's transactions (or all for admin)
@@ -900,13 +935,22 @@ def export_excel(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="無資料")
     for doc in data: doc["_id"] = str(doc["_id"])
     df = pd.DataFrame(data)
-    cols = ["date", "type", "category", "title", "amount", "payment_method"]
+    cols = ["date", "type", "category", "title", "amount", "payment_method", "note"]
     df = df[[c for c in cols if c in df.columns]]
+    
+    # Use in-memory buffer
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Transactions')
+    output.seek(0)
+    
     filename = "PyMoney_Export.xlsx"
-    df.to_excel(filename, index=False)
-    return FileResponse(
-        filename, 
-        filename=filename, 
+    headers = {
+        'Content-Disposition': f'attachment; filename="{filename}"'
+    }
+    return StreamingResponse(
+        output, 
+        headers=headers, 
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
@@ -921,7 +965,7 @@ def get_import_sample(format: str = "csv"):
             "title": "Lunch",
             "amount": 100,
             "payment_method": "Cash",
-            "note": "Example transaction"
+            "note": "Example"
         },
         {
             "date": "2024-01-02",
@@ -930,25 +974,32 @@ def get_import_sample(format: str = "csv"):
             "title": "Part-time",
             "amount": 5000,
             "payment_method": "Bank",
-            "note": "Monthly income"
+            "note": "Income"
         }
     ]
     df = pd.DataFrame(data)
     
     if format == "csv":
+        output = io.StringIO()
+        df.to_csv(output, index=False, encoding="utf-8-sig")
+        mem = io.BytesIO()
+        mem.write(output.getvalue().encode('utf-8-sig'))
+        mem.seek(0)
+        
         filename = "PyMoney_Import_Sample.csv"
-        df.to_csv(filename, index=False, encoding="utf-8-sig")
-        return FileResponse(
-            filename, 
-            filename=filename,
-            media_type="text/csv"
-        )
+        headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
+        return StreamingResponse(mem, headers=headers, media_type="text/csv")
     else:
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        output.seek(0)
+        
         filename = "PyMoney_Import_Sample.xlsx"
-        df.to_excel(filename, index=False)
-        return FileResponse(
-            filename, 
-            filename=filename,
+        headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
+        return StreamingResponse(
+            output, 
+            headers=headers,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
@@ -990,13 +1041,13 @@ async def import_file(file: UploadFile = File(...), current_user: dict = Depends
                 # 使用 pandas 強大的日期解析功能，支援多種格式 (2024/1/1, 2024-01-01, etc.)
                 if r.get("date"):
                     dt = pd.to_datetime(r["date"])
-                    r["date"] = dt.to_pydatetime()
+                    r["date"] = dt.strftime("%Y-%m-%d")
                 else:
-                    r["date"] = datetime.now()
+                    r["date"] = datetime.now().strftime("%Y-%m-%d")
             except Exception as e:
                 print(f"Date parse error for {r.get('date')}: {e}")
                 # 若日期格式真的無法解析，設為今天，避免匯入失敗
-                r["date"] = datetime.now()
+                r["date"] = datetime.now().strftime("%Y-%m-%d")
             
             final_records.append(r)
         

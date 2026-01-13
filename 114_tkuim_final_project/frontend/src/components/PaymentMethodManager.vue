@@ -16,7 +16,7 @@ const addMethod = async () => {
   if (!newMethod.value.name) return alert(t('input_name_hint'))
   
   try {
-    await axios.post('http://127.0.0.1:8000/api/payment-methods', {
+    await axios.post('/api/payment-methods', {
       ...newMethod.value,
       user_id: props.currentUser ? props.currentUser.id : null
     })
@@ -30,7 +30,7 @@ const addMethod = async () => {
 const deleteMethod = async (id) => {
   if (!confirm(t('delete_confirm_method'))) return
   try {
-    await axios.delete(`http://127.0.0.1:8000/api/payment-methods/${id}`)
+    await axios.delete(`/api/payment-methods/${id}`)
     emit('updated')
   } catch (err) {
     alert(t('delete_failed'))

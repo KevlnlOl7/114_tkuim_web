@@ -6,6 +6,7 @@ import axios from 'axios'
 const props = defineProps({
   form: { type: Object, required: true },
   categories: { type: Array, required: true },
+  paymentMethods: { type: Array, default: () => [] },
   isEditing: { type: Boolean, default: false },
   rateUpdatedAt: { type: String, default: '' }
 })
@@ -44,7 +45,7 @@ watch(() => localForm.value.currency, async (newVal) => {
     return
   }
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/rates/${newVal}`)
+    const res = await axios.get(`/api/rates/${newVal}`)
     localForm.value.exchange_rate = Number(res.data.rate.toFixed(6))
     const utc = res.data.updated_at
     if (utc) {
@@ -119,10 +120,9 @@ const handleSubmit = () => {
             <button type="button" @click="$emit('manage-payment-methods')" class="btn-sm">⚙️</button>
           </div>
           <select v-model="localForm.payment_method">
-            <option value="Cash">{{ t('cash') }}</option>
-            <option value="Credit Card">{{ t('credit_card') }}</option>
-            <option value="Bank">{{ t('bank') }}</option>
-            <option value="LinePay">{{ t('linepay') }}</option>
+            <option v-for="pm in paymentMethods" :key="pm.name" :value="pm.name">
+              {{ pm.icon }} {{ t(pm.name.toLowerCase().replace(' ', '_')) || pm.name }}
+            </option>
           </select>
         </div>
       </div>
@@ -180,10 +180,9 @@ const handleSubmit = () => {
           <label>{{ t('to_account') }}</label>
           <select v-model="localForm.target_account" required>
             <option value="" disabled>-</option>
-            <option value="Cash">{{ t('cash') }}</option>
-            <option value="Credit Card">{{ t('credit_card') }}</option>
-            <option value="Bank">{{ t('bank') }}</option>
-            <option value="LinePay">{{ t('linepay') }}</option>
+            <option v-for="pm in paymentMethods" :key="pm.name" :value="pm.name">
+              {{ pm.icon }} {{ t(pm.name.toLowerCase().replace(' ', '_')) || pm.name }}
+            </option>
           </select>
         </div>
       </div>
@@ -195,7 +194,7 @@ const handleSubmit = () => {
         </div>
       </div>
       
-      <button @click="handleSubmit" class="btn-submit" :class="{ 'btn-update': isEditing }">
+      <button type="button" @click="handleSubmit" class="btn-submit" :class="{ 'btn-update': isEditing }">
         {{ isEditing ? (localForm.type === 'expense' ? '💸 ' : (localForm.type === 'income' ? '💰 ' : '🔄 ')) + t('update') : (localForm.type === 'expense' ? '💸 ' : (localForm.type === 'income' ? '💰 ' : '🔄 ')) + t('submit') }}
       </button>
     </div>
@@ -206,20 +205,20 @@ const handleSubmit = () => {
 .card { 
   background: white; 
   border-radius: 12px; 
-  padding: 16px 20px; 
+  padding: 20px 24px; 
   box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
   border: 1px solid #e0e0e0; 
   margin-bottom: 15px; 
 }
-.form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .form-header h3 { font-size: 1rem; margin: 0; }
-.form-body { display: flex; flex-direction: column; gap: 10px; }
+.form-body { display: flex; flex-direction: column; gap: 16px; }
 
 /* Grid layout for consistent alignment */
 .form-row { 
   display: grid; 
   grid-template-columns: repeat(3, 1fr); 
-  gap: 12px; 
+  gap: 16px; 
 }
 .form-row.two-col { grid-template-columns: repeat(2, 1fr); }
 .form-row.one-col { grid-template-columns: 1fr; }
@@ -227,17 +226,18 @@ const handleSubmit = () => {
 .input-group { display: flex; flex-direction: column; }
 .input-group.span-2 { grid-column: span 2; }
 .input-group.span-3 { grid-column: span 3; }
-.input-group label { font-size: 0.75rem; color: #666; font-weight: 600; margin-bottom: 4px; }
+.input-group label { font-size: 0.8rem; color: #555; font-weight: 600; margin-bottom: 6px; }
 
 input, select { 
-  padding: 8px 10px; 
+  padding: 10px 12px; 
   border: 2px solid #e0e0e0; 
-  border-radius: 6px; 
-  font-size: 0.9rem; 
+  border-radius: 8px; 
+  font-size: 0.95rem; 
   width: 100%; 
   box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-input:focus, select:focus { border-color: #667eea; outline: none; }
+input:focus, select:focus { border-color: #667eea; outline: none; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
 
 /* Amount row with currency */
 .amount-wrapper { display: flex; gap: 6px; align-items: center; }

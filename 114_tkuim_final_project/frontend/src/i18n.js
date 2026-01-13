@@ -100,6 +100,34 @@ const messages = {
         preset: '快速選擇', range: '自訂期間',
         net_assets: '淨資產', cash: '現金', bank: '銀行', credit_card: '信用卡', linepay: 'LinePay',
         loading: '載入中...',
+        // New keys for CategoryBudgetPanel and RecurringManager
+        category_budgets: '分類預算', no_category_budgets: '尚未設定分類預算', budget_limit: '預算上限',
+        add_category_budget: '新增分類預算', add: '新增', select: '請選擇', budget_saved: '預算已儲存',
+        confirm_delete: '確定要刪除嗎？', delete_success: '已刪除', update_success: '更新成功', create_success: '建立成功',
+        recurring_transactions: '重複交易', recurring_transaction: '重複交易', no_recurring: '尚未設定重複交易',
+        edit: '編輯', next: '下次', execute_now: '立即執行', recurring_executed: '交易已執行',
+        // Example & Export
+        // Example & Export
+        import_data: '匯入資料', export_excel: '匯出 Excel', example_template: '範例', download_template_hint: '下載匯入範例格式',
+        no_data_to_export: '無資料可匯出',
+        no_data_to_export: '無資料可匯出',
+        // QuickEntry
+        quick_entry: '快速記帳', save_as_template: '存為模板', no_templates: '尚無模板',
+        template_name: '模板名稱', template_name_ph: '例如：早餐',
+        // AssetsDashboard
+        total_assets: '總資產 (Assets)', total_liabilities: '總負債 (Liabilities)',
+        // TransactionList Sort
+        sort_date_desc: '📅 日期 (新→舊)', sort_date_asc: '📅 日期 (舊→新)',
+        sort_amount_desc: '💰 金額 (大→小)', sort_amount_asc: '💰 金額 (小→大)',
+        // Generic
+        cancel: '取消', delete_success: '刪除成功',
+        password_mismatch: '兩次密碼不一致',
+        // Additional keys
+        leave_family_confirm: '確定要離開這個家庭嗎？',
+        delete_template_confirm: '確定要刪除這個模板嗎？',
+        balance: '結餘', left_family: '已離開家庭',
+        password_min_length: '密碼長度至少需要 8 個字元',
+        password_complexity: '密碼必須包含大寫字母、小寫字母和數字'
     },
     'en-US': {
         item_desc: 'Title', amount: 'Amount', date: 'Date', category: 'Category',
@@ -197,6 +225,40 @@ const messages = {
         preset: 'Preset', range: 'Custom Range',
         net_assets: 'Net Assets', cash: 'Cash', bank: 'Bank', credit_card: 'Credit Card', linepay: 'LinePay',
         loading: 'Loading...',
+        // New keys for CategoryBudgetPanel and RecurringManager
+        category_budgets: 'Category Budgets', no_category_budgets: 'No category budgets set', budget_limit: 'Budget Limit',
+        add_category_budget: 'Add Category Budget', add: 'Add', select: 'Select', budget_saved: 'Budget saved',
+        confirm_delete: 'Are you sure you want to delete?', delete_success: 'Deleted', update_success: 'Updated successfully', create_success: 'Created successfully',
+        recurring_transactions: 'Recurring Transactions', recurring_transaction: 'Recurring Transaction', no_recurring: 'No recurring transactions',
+        edit: 'Edit', next: 'Next', execute_now: 'Execute Now', recurring_executed: 'Transaction executed',
+        // Example & Export
+        // Example & Export
+        import_data: 'Import Data', export_excel: 'Export Excel', example_template: 'Example', download_template_hint: 'Download Import Template',
+        // QuickEntry
+        quick_entry: 'Quick Entry', save_as_template: 'Save as Template', no_templates: 'No templates',
+        template_name: 'Template Name', template_name_ph: 'e.g. Breakfast',
+        // AssetsDashboard
+        total_assets: 'Total Assets', total_liabilities: 'Total Liabilities',
+        // TransactionList Sort
+        sort_date_desc: '📅 Date (New to Old)', sort_date_asc: '📅 Date (Old to New)',
+        sort_amount_desc: '💰 Amount (High to Low)', sort_amount_asc: '💰 Amount (Low to High)',
+        // Generic
+        cancel: 'Cancel', search: 'Search', empty: 'No Data',
+        preset: 'Preset', range: 'Custom Range', this_month: 'This Month', last_month: 'Last Month', this_year: 'This Year', all_time: 'All Time',
+        payment_method: 'Account', member: 'Member',
+        // Missing
+        save: 'Save', settings: 'Settings', spend: 'Spent', budget: 'Budget', remaining: 'Remaining', over: 'Over Limit',
+        confirm_delete_user: 'Delete User?', delete_warning_msg: 'Delete {name} (@{username})?', confirm_delete_input_hint: 'Type {username} to confirm:',
+        user_mgmt: 'User Management', delete: 'Delete',
+        family_mgmt: 'Family Management', joined_family: 'Joined Family', family_book: 'Family Book',
+        leave: 'Leave', my_family: 'My Family', filter_member_accounts: 'Filter Member:', all: 'All', admin: 'Admin', user: 'Member',
+        app_title: 'PyMoney Book', logout: 'Logout', gen_invite_code: 'Generate Code', generating: 'Generating...', join_member: 'Add Member', manage: 'Manage',
+        users_family: '{name}\'s Family',
+        recurring: 'Recurring', frequency: 'Frequency', next_date: 'Next Date',
+        daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly',
+        category_budget: 'Category Budget', set_budget: 'Set Budget',
+        day_before_yesterday: 'Day Before Yesterday', yesterday: 'Yesterday', today: 'Today', to_date: 'to', default_currency: 'Default Currency',
+        optional: 'Optional', select_option: 'Select', no_chart_data: 'No chart data available'
     },
     'vi': {
         item_desc: 'Tiêu đề', amount: 'Số tiền', date: 'Ngày', category: 'Danh mục',
@@ -286,7 +348,24 @@ const messages = {
         load_users_failed: 'Tải danh sách người dùng thất bại', reset_failed: 'Đặt lại thất bại',
         change_password: 'Đổi mật khẩu', old_password_ph: 'Mật khẩu cũ',
         new_password_ph: 'Mật khẩu mới', confirm_password_ph: 'Xác nhận mật khẩu',
-        password_changed: 'Đổi mật khẩu thành công', old_password_wrong: 'Mật khẩu cũ không đúng'
+        password_changed: 'Đổi mật khẩu thành công', old_password_wrong: 'Mật khẩu cũ không đúng',
+        // New keys for CategoryBudgetPanel and RecurringManager
+        category_budgets: 'Ngân sách theo danh mục', no_category_budgets: 'Chưa đặt ngân sách danh mục', budget_limit: 'Hạn mức ngân sách',
+        add_category_budget: 'Thêm ngân sách danh mục', add: 'Thêm', select: 'Chọn', budget_saved: 'Đã lưu ngân sách',
+        confirm_delete: 'Bạn có chắc muốn xóa?', delete_success: 'Đã xóa', update_success: 'Cập nhật thành công', create_success: 'Tạo thành công',
+        recurring_transactions: 'Giao dịch định kỳ', recurring_transaction: 'Giao dịch định kỳ', no_recurring: 'Chưa có giao dịch định kỳ',
+        edit: 'Sửa', next: 'Tiếp theo', execute_now: 'Thực hiện ngay', recurring_executed: 'Đã thực hiện giao dịch',
+        // Generic & Charts
+        day: 'Ngày', month: 'Tháng', year: 'Năm',
+        last_7_days: '7 ngày qua', last_30_days: '30 ngày qua', this_year: 'Năm nay', all_time: 'Tất cả',
+        payment_method: 'Tài khoản', member: 'Thành viên', this_month: 'Tháng này', last_month: 'Tháng trước',
+        preset: 'Mặc định', range: 'Khoảng',
+        example_template: 'Mẫu', download_template_hint: 'Tải mẫu nhập liệu',
+        // Assets
+        total_assets: 'Tổng tài sản', total_liabilities: 'Tổng nợ',
+        // Sort
+        sort_date_desc: '📅 Ngày (Mới→Cũ)', sort_date_asc: '📅 Ngày (Cũ→Mới)',
+        sort_amount_desc: '💰 Số tiền (Lớn→Nhỏ)', sort_amount_asc: '💰 Số tiền (Nhỏ→Lớn)',
     },
     'id': {
         item_desc: 'Judul', amount: 'Jumlah', date: 'Tanggal', category: 'Kategori',
@@ -376,7 +455,24 @@ const messages = {
         load_users_failed: 'Gagal memuat pengguna', reset_failed: 'Gagal reset',
         change_password: 'Ubah Sandi', old_password_ph: 'Sandi Lama',
         new_password_ph: 'Sandi Baru', confirm_password_ph: 'Konfirmasi Sandi',
-        password_changed: 'Sandi berhasil diubah', old_password_wrong: 'Sandi lama salah'
+        password_changed: 'Sandi berhasil diubah', old_password_wrong: 'Sandi lama salah',
+        // New keys for CategoryBudgetPanel and RecurringManager
+        category_budgets: 'Anggaran per Kategori', no_category_budgets: 'Belum ada anggaran kategori', budget_limit: 'Batas Anggaran',
+        add_category_budget: 'Tambah Anggaran Kategori', add: 'Tambah', select: 'Pilih', budget_saved: 'Anggaran tersimpan',
+        confirm_delete: 'Yakin ingin menghapus?', delete_success: 'Dihapus', update_success: 'Berhasil diperbarui', create_success: 'Berhasil dibuat',
+        recurring_transactions: 'Transaksi Berulang', recurring_transaction: 'Transaksi Berulang', no_recurring: 'Belum ada transaksi berulang',
+        edit: 'Edit', next: 'Berikutnya', execute_now: 'Jalankan Sekarang', recurring_executed: 'Transaksi dijalankan',
+        // Generic & Charts
+        day: 'Hari', month: 'Bulan', year: 'Tahun',
+        last_7_days: '7 Hari Terakhir', last_30_days: '30 Hari Terakhir', this_year: 'Tahun Ini', all_time: 'Semua',
+        payment_method: 'Akun', member: 'Anggota', this_month: 'Bulan Ini', last_month: 'Bulan Lalu',
+        preset: 'Preset', range: 'Rentang',
+        example_template: 'Contoh', download_template_hint: 'Unduh Template',
+        // Assets
+        total_assets: 'Total Aset', total_liabilities: 'Total Liabilitas',
+        // Sort
+        sort_date_desc: '📅 Tanggal (Baru→Lama)', sort_date_asc: '📅 Tanggal (Lama→Baru)',
+        sort_amount_desc: '💰 Jumlah (Besar→Kecil)', sort_amount_asc: '💰 Jumlah (Kecil→Besar)',
     },
     'ja': {
         item_desc: '項目名', amount: '金額', date: '日付', category: 'カテゴリ',
@@ -466,7 +562,24 @@ const messages = {
         load_users_failed: 'ユーザーの読み込みに失敗しました', reset_failed: 'リセットに失敗しました',
         change_password: 'パスワード変更', old_password_ph: '現在のパスワード',
         new_password_ph: '新しいパスワード', confirm_password_ph: 'パスワード確認',
-        password_changed: 'パスワードが変更されました', old_password_wrong: '現在のパスワードが正しくありません'
+        password_changed: 'パスワードが変更されました', old_password_wrong: '現在のパスワードが正しくありません',
+        // New keys for CategoryBudgetPanel and RecurringManager
+        category_budgets: 'カテゴリ予算', no_category_budgets: 'カテゴリ予算が未設定', budget_limit: '予算上限',
+        add_category_budget: 'カテゴリ予算を追加', add: '追加', select: '選択', budget_saved: '予算を保存しました',
+        confirm_delete: '削除してもよろしいですか？', delete_success: '削除しました', update_success: '更新しました', create_success: '作成しました',
+        recurring_transactions: '定期取引', recurring_transaction: '定期取引', no_recurring: '定期取引がありません',
+        edit: '編集', next: '次回', execute_now: '今すぐ実行', recurring_executed: '取引を実行しました',
+        // Generic & Charts
+        day: '日', month: '月', year: '年',
+        last_7_days: '過去7日間', last_30_days: '過去30日間', this_year: '今年', all_time: '全期間',
+        payment_method: '口座', member: 'メンバー', this_month: '今月', last_month: '先月',
+        preset: '期間', range: '範囲指定',
+        example_template: '見本', download_template_hint: 'インポート用テンプレートをダウンロード',
+        // Assets
+        total_assets: '総資産', total_liabilities: '総負債',
+        // Sort
+        sort_date_desc: '📅 日付 (新→旧)', sort_date_asc: '📅 日付 (旧→新)',
+        sort_amount_desc: '💰 金額 (高い順)', sort_amount_asc: '💰 金額 (低い順)',
     },
     'ko': {
         item_desc: '항목', amount: '금액', date: '날짜', category: '카테고리',
@@ -556,7 +669,24 @@ const messages = {
         load_users_failed: '사용자 로드 실패', reset_failed: '초기화 실패',
         change_password: '비밀번호 변경', old_password_ph: '현재 비밀번호',
         new_password_ph: '새 비밀번호', confirm_password_ph: '비밀번호 확인',
-        password_changed: '비밀번호가 변경되었습니다', old_password_wrong: '현재 비밀번호가 틀렸습니다'
+        password_changed: '비밀번호가 변경되었습니다', old_password_wrong: '현재 비밀번호가 틀렸습니다',
+        // New keys for CategoryBudgetPanel and RecurringManager
+        category_budgets: '카테고리 예산', no_category_budgets: '카테고리 예산 없음', budget_limit: '예산 한도',
+        add_category_budget: '카테고리 예산 추가', add: '추가', select: '선택', budget_saved: '예산이 저장되었습니다',
+        confirm_delete: '삭제하시겠습니까?', delete_success: '삭제되었습니다', update_success: '업데이트되었습니다', create_success: '생성되었습니다',
+        recurring_transactions: '정기 거래', recurring_transaction: '정기 거래', no_recurring: '정기 거래 없음',
+        edit: '편집', next: '다음', execute_now: '지금 실행', recurring_executed: '거래가 실행되었습니다',
+        // Generic & Charts
+        day: '일', month: '월', year: '년',
+        last_7_days: '최근 7일', last_30_days: '최근 30일', this_year: '올해', all_time: '전체',
+        payment_method: '계좌', member: '멤버', this_month: '이번 달', last_month: '지난달',
+        preset: '빠른 선택', range: '기간 설정',
+        example_template: '예제', download_template_hint: '가져오기 템플릿 다운로드',
+        // Assets
+        total_assets: '총 자산', total_liabilities: '총 부채',
+        // Sort
+        sort_date_desc: '📅 날짜 (최신순)', sort_date_asc: '📅 날짜 (오래된순)',
+        sort_amount_desc: '💰 금액 (높은순)', sort_amount_asc: '💰 금액 (낮은순)',
     },
     'tl': {
         item_desc: 'Pamagat', amount: 'Halaga', date: 'Petsa', category: 'Kategorya',
@@ -642,7 +772,24 @@ const messages = {
         load_users_failed: 'Nabigong i-load ang mga user', reset_failed: 'Nabigong i-reset',
         change_password: 'Baguhin ang Password', old_password_ph: 'Kasalukuyang Password',
         new_password_ph: 'Bagong Password', confirm_password_ph: 'Kumpirmahin ang Password',
-        password_changed: 'Matagumpay na nabago ang password', old_password_wrong: 'Mali ang kasalukuyang password'
+        password_changed: 'Matagumpay na nabago ang password', old_password_wrong: 'Mali ang kasalukuyang password',
+        // New keys for CategoryBudgetPanel and RecurringManager
+        category_budgets: 'Mga Badyet sa Kategorya', no_category_budgets: 'Walang category budget', budget_limit: 'Budget Limit',
+        add_category_budget: 'Magdagdag ng Category Budget', add: 'Idagdag', select: 'Piliin', budget_saved: 'Nai-save ang budget',
+        confirm_delete: 'Sigurado ka bang tatanggalin?', delete_success: 'Tinanggal na', update_success: 'Na-update', create_success: 'Nagawa',
+        recurring_transactions: 'Mga Paulit-ulit na Transaksyon', recurring_transaction: 'Paulit-ulit na Transaksyon', no_recurring: 'Walang paulit-ulit na transaksyon',
+        edit: 'I-edit', next: 'Susunod', execute_now: 'Isagawa Ngayon', recurring_executed: 'Naisagawa ang transaksyon',
+        // Generic & Charts
+        day: 'Araw', month: 'Buwan', year: 'Taon',
+        last_7_days: 'Huling 7 Araw', last_30_days: 'Huling 30 Araw', this_year: 'Ngayong Taon', all_time: 'Lahat',
+        payment_method: 'Account', member: 'Miyembro', this_month: 'Ngayong Buwan', last_month: 'Nakaraang Buwan',
+        preset: 'Preset', range: 'Saklaw',
+        example_template: 'Halimbawa', download_template_hint: 'I-download ang Template',
+        // Assets
+        total_assets: 'Kabuuang Ari-arian', total_liabilities: 'Kabuuang Utang',
+        // Sort
+        sort_date_desc: '📅 Petsa (Bago→Luma)', sort_date_asc: '📅 Petsa (Luma→Bago)',
+        sort_amount_desc: '💰 Halaga (Malaki→Maliit)', sort_amount_asc: '💰 Halaga (Maliit→Malaki)',
     }
 }
 

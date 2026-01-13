@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { t, currentLocale } from '../i18n.js'
 import Chart from './Chart.vue'
-import BarChart from './BarChart.vue'
+import TrendChart from './TrendChart.vue'
 
 const props = defineProps({
   stats: { type: Object, required: true },
@@ -11,10 +11,11 @@ const props = defineProps({
   budgetLimit: { type: Number, default: 0 },
   monthlyExpense: { type: Number, default: 0 },
   totalAmount: { type: Number, default: 0 },
-  categories: { type: Array, default: () => [] }
+  categories: { type: Array, default: () => [] },
+  isDarkMode: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['update-budget', 'import', 'export', 'download-sample'])
+const emit = defineEmits(['update-budget', 'import', 'export', 'download-sample', 'show-toast'])
 
 const showBudgetInput = ref(false)
 const newBudget = ref(0)
@@ -112,7 +113,7 @@ const processedTrendData = computed(() => {
   // 3. Sort & Format
   const sortedKeys = Object.keys(groups).sort()
   return {
-    dates: sortedKeys,
+    labels: sortedKeys,
     expenses: sortedKeys.map(k => groups[k].expense),
     incomes: sortedKeys.map(k => groups[k].income)
   }
@@ -169,8 +170,7 @@ const toggleBudgetEdit = () => {
 const saveBudget = () => {
   if (Number(newBudget.value) < 0) {
     const msg = t('budget_negative_error') || '預算不能為負數'
-    console.log('Budget validation failed:', msg)
-    alert(msg)
+    emit('show-toast', msg, 'error')
     return
   }
   emit('update-budget', Number(newBudget.value))
@@ -221,7 +221,7 @@ const handleImport = (event) => {
       <div class="button-group">
         <input type="file" ref="fileInput" @change="handleImport" accept=".xlsx,.xls,.csv" style="display: none" />
         <button @click="triggerFileInput" class="btn-outline">{{ t('import_data') }}</button>
-        <button @click="$emit('download-sample')" class="btn-outline sample-btn" title="下載匯入範例格式">⬇️ 範例</button>
+        <button @click="$emit('download-sample')" class="btn-outline sample-btn" :title="t('download_template_hint')">⬇️ {{ t('example_template') }}</button>
         <button @click="$emit('export')" class="btn-outline">{{ t('export_excel') }}</button>
       </div>
     </div>
@@ -237,18 +237,18 @@ const handleImport = (event) => {
            </select>
            
            <select v-model="analysisFilterType">
-             <option value="preset">{{ t('preset') || '快速' }}</option>
-             <option value="year">{{ t('year') || '年' }}</option>
-             <option value="month">{{ t('month') || '月' }}</option>
-             <option value="day">{{ t('day') || '日' }}</option>
-             <option value="range">{{ t('range') || '期間' }}</option>
+             <option value="preset">{{ t('preset') }}</option>
+             <option value="year">{{ t('year') }}</option>
+             <option value="month">{{ t('month') }}</option>
+             <option value="day">{{ t('day') }}</option>
+             <option value="range">{{ t('range') }}</option>
            </select>
 
            <select v-if="analysisFilterType === 'preset'" v-model="analysisPreset">
-             <option value="thisMonth">{{ t('this_month') || '本月' }}</option>
-             <option value="lastMonth">{{ t('last_month') || '上月' }}</option>
-             <option value="thisYear">{{ t('this_year') || '今年' }}</option>
-             <option value="all">{{ t('all_time') || '全部' }}</option>
+             <option value="thisMonth">{{ t('this_month') }}</option>
+             <option value="lastMonth">{{ t('last_month') }}</option>
+             <option value="thisYear">{{ t('this_year') }}</option>
+             <option value="all">{{ t('all_time') }}</option>
            </select>
            
            <select v-if="analysisFilterType === 'year'" v-model="analysisYear">
@@ -279,18 +279,18 @@ const handleImport = (event) => {
           </select>
           
           <select v-model="trendFilterType">
-             <option value="preset">{{ t('preset') || '快速' }}</option>
-             <option value="year">{{ t('year') || '年' }}</option>
-             <option value="month">{{ t('month') || '月' }}</option>
-             <option value="day">{{ t('day') || '日' }}</option>
-             <option value="range">{{ t('range') || '期間' }}</option>
+             <option value="preset">{{ t('preset') }}</option>
+             <option value="year">{{ t('year') }}</option>
+             <option value="month">{{ t('month') }}</option>
+             <option value="day">{{ t('day') }}</option>
+             <option value="range">{{ t('range') }}</option>
           </select>
 
           <select v-if="trendFilterType === 'preset'" v-model="trendPreset">
-            <option value="7d">{{ t('last_7_days') || '近7天' }}</option>
-            <option value="30d">{{ t('last_30_days') || '近30天' }}</option>
-            <option value="thisYear">{{ t('this_year') || '今年' }}</option>
-            <option value="all">{{ t('all_time') || '全部' }}</option>
+            <option value="7d">{{ t('last_7_days') }}</option>
+            <option value="30d">{{ t('last_30_days') }}</option>
+            <option value="thisYear">{{ t('this_year') }}</option>
+            <option value="all">{{ t('all_time') }}</option>
           </select>
 
           <select v-if="trendFilterType === 'year'" v-model="trendYear">
@@ -307,7 +307,7 @@ const handleImport = (event) => {
           </div>
         </div>
       </div>
-      <BarChart :trendData="processedTrendData" :expenseLabel="t('expense')" :incomeLabel="t('income')" />
+      <TrendChart :data="processedTrendData" :isDarkMode="isDarkMode" />
     </div>
   </div>
 </template>
