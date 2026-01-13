@@ -185,6 +185,7 @@ const getFilterQuery = () => {
   if (startDate.value) query += `&start_date=${startDate.value}`
   if (endDate.value) query += `&end_date=${endDate.value}`
   
+  // ✅ NEW: 用戶篩選優先
   if (selectedUserIds.value.length > 0) {
     query += `&user_ids=${selectedUserIds.value.join(',')}`
   } else if (currentUser.value) {
@@ -366,18 +367,21 @@ const exportExcel = async () => {
     return
   }
   try {
-    const res = await axios.get('/api/export', {
-      responseType: 'blob'
-    })
+    // ✅ NEW: 添加用戶篩選到匯出
+    let url = '/api/export'
+    if (selectedUserIds.value.length > 0) {
+      url += `?user_ids=${selectedUserIds.value.join(',')}`
+    }
+    const res = await axios.get(url, { responseType: 'blob' })
     // 建立 Blob 下載連結
-    const url = window.URL.createObjectURL(new Blob([res.data]))
+    const blobUrl = window.URL.createObjectURL(new Blob([res.data]))
     const link = document.createElement('a')
-    link.href = url
+    link.href = blobUrl
     link.setAttribute('download', 'PyMoney_Export.xlsx')
     document.body.appendChild(link)
     link.click()
     link.remove()
-    window.URL.revokeObjectURL(url)
+    window.URL.revokeObjectURL(blobUrl)
   } catch (error) {
     showToast('匯出失敗：' + (error.response?.data?.detail || error.message), 'error')
   }
@@ -405,6 +409,12 @@ const downloadSample = async () => {
 const handleImport = async (file) => {
   const formData = new FormData()
   formData.append('file', file)
+  
+  // Add ledger_id if a specific ledger is selected
+  if (activeLedgerId.value && activeLedgerId.value !== 'all') {
+    formData.append('ledger_id', activeLedgerId.value)
+  }
+  
   try {
     const res = await axios.post('/api/import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
@@ -469,6 +479,7 @@ const acceptInviteCode = async () => {
     )
     joinMessage.value = res.data.message
     await fetchLedgers() // Refresh ledgers list
+    await fetchAvailableUsers()  // ✅ NEW
     if (res.data.ledger_id) {
         selectLedger(res.data.ledger_id)
     }
@@ -483,9 +494,12 @@ const acceptInviteCode = async () => {
 }
 
 const activeLedger = computed(() => {
-    if (activeLedgerId.value === 'all') return {}
-    return ledgers.value.find(l => String(l.id) === String(activeLedgerId.value)) || {}
+  if (!activeLedgerId.value || activeLedgerId.value === 'all') return null
+  return ledgers.value.find(l => l.id === activeLedgerId.value) || null
 })
+
+// ✅ NEW: 用戶篩選
+const availableUsers = ref([])  // 可選擇的用戶列表
 
 // --- Reset Password ---
 const handleResetPassword = async () => {
@@ -590,9 +604,29 @@ const handleRenameUser = async () => {
 const fetchLedgers = async () => {
   try {
     const res = await axios.get('/api/ledgers')
-    ledgers.value = res.data
+    ledgers.value = res.data.map(l => ({ id: l.id, name: l.name, members: l.members, owner_id: l.owner_id }))
   } catch (err) {
-    console.error('Error fetching ledgers:', err)
+    console.error(err)
+  }
+}
+
+// ✅ NEW: 獲取可選擇的用戶列表
+const fetchAvailableUsers = async () => {
+  try {
+    // 如果是管理員，從交易中提取所有用戶
+    if (currentUser.value?.role === 'admin') {
+      const res = await axios.get('/api/family/members')
+      availableUsers.value = res.data
+    } else {
+      // 一般用戶只能看到自己
+      availableUsers.value = [currentUser.value]
+    }
+  } catch (err) {
+    console.error(err)
+    // Fallback: 至少顯示當前用戶
+    if (currentUser.value) {
+      availableUsers.value = [currentUser.value]
+    }
   }
 }
 
@@ -858,6 +892,18 @@ onMounted(() => {
             </select>
             <button v-if="activeLedgerId !== 'all'" @click="showLedgerSettingsModal = true" class="btn-settings" :title="t('ledger_settings')">⚙️</button>
             <button @click="showCreateLedgerModal = true" class="btn-add-ledger" :title="t('new_ledger')">+</button>
+          </div>
+          
+          <!-- ✅ NEW: User Filter Selector -->
+          <div v-if="currentUser?.role === 'admin' && availableUsers.length > 1" class="user-filter">
+            <span class="filter-icon">👥</span>
+            <select v-model="selectedUserIds" @change="refreshData" multiple class="user-select">
+              <option value="" disabled>{{ t('select_users') || '選擇用戶' }}</option>
+              <option v-for="user in availableUsers" :key="user.id" :value="user.id">
+                {{ user.display_name }}
+              </option>
+            </select>
+            <button v-if="selectedUserIds.length > 0" @click="selectedUserIds = []; refreshData()" class="btn-clear-filter" :title="t('clear_filter') || '清除篩選'">✖</button>
           </div>
         </div>
         <div class="header-actions">
