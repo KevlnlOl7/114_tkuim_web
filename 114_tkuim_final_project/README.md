@@ -1,27 +1,48 @@
-# 💰 PyMoney - 協同記帳系統
+# 💰 PyMoney - 智慧協同記帳系統
 
-PyMoney 是一個現代化的全功能記帳應用程式，專為個人與家庭設計。支持多帳本管理、即時共用記帳、詳細的圖表分析以及 Excel 資料匯入/匯出功能。
+<div align="center">
 
-## ✨ 主要功能 (Key Features)
+![Vue.js](https://img.shields.io/badge/Vue.js-3.x-4FC08D?style=for-the-badge&logo=vue.js)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=for-the-badge&logo=fastapi)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
-### 👥 協同合作
-- **共用帳本**: 創建家庭或團隊帳本，即時同步所有成員的交易。
-- **權限管理**: 區分管理員與一般成員，確保資料安全。
-- **用戶篩選**: 在共用帳本中，可篩選特定成員的交易紀錄 (管理員功能)。
+**一款支援多幣別、家庭共享、智慧分析的全功能記帳 Web 應用程式**
 
-### 📊 帳務管理
-- **多帳本支援**: 同時管理個人、家庭、旅遊等多個帳本。
-- **完整 CRUD**: 輕鬆新增、編輯、刪除交易。
-- **資產總覽**: 自動計算淨資產（資產 - 負債），即時掌握財務狀況。
-- **預算控制**: 設定月度預算，首頁即時顯示使用進度。
+[功能特色](#-功能特色) • [快速開始](#-快速開始) • [技術架構](#-技術架構) • [API 文件](#-api-文件)
 
-### 📈 數據分析
-- **視覺化儀表板**: 使用圓餅圖 (Pie Chart) 與長條圖 (Bar Chart) 分析收支分佈。
-- **收支趨勢**: 查看每日/每月的收支變化趨勢。
+</div>
 
-### 🔄 資料整合
-- **匯入功能**: 支持 CSV/Excel 批次匯入交易，自動偵測欄位。
-- **匯出報表**: 將交易紀錄匯出為 Excel 檔，並包含記帳人資訊。
+---
+
+## ✨ 功能特色
+
+### 💳 核心記帳
+- **CRUD 完整** - 新增、編輯、刪除交易記錄
+- **分類管理** - 自訂收支分類與圖示
+- **多種支付方式** - 現金、信用卡、銀行、LinePay
+- **備註功能** - 為每筆交易添加詳細備註
+
+### 🌍 多幣別支援
+- **16 種貨幣** - TWD, USD, JPY, EUR, CNY 等
+- **即時匯率** - 自動換算外幣金額
+- **原幣記錄** - 保留原始外幣金額
+
+### 👨‍👩‍👧‍👦 家庭共享
+- **邀請碼機制** - 安全邀請家人加入
+- **成員管理** - 管理員可移除成員
+- **共享帳本** - 查看全家庭交易記錄
+
+### 📊 智慧分析
+- **圓餅圖** - 支出分類佔比視覺化
+- **趨勢圖** - 月度收支趨勢分析
+- **預算追蹤** - 總預算與分類預算監控
+
+### ⚡ 進階功能
+- **快速記帳** - 模板化常用交易
+- **重複交易** - 日/週/月/年自動記帳
+- **匯入匯出** - CSV 匯入、Excel 匯出
+- **7 國語言** - 繁中/英/日/韓/越/印尼/菲律賓
 
 ---
 
@@ -29,9 +50,97 @@ PyMoney 是一個現代化的全功能記帳應用程式，專為個人與家庭
 
 影片連結：https://youtu.be/FbvE-2iNmOQ
 
-## 🛠️ 技術架構與流程 (Architecture & Flow)
+## 🚀 快速開始
 
-### 1. 系統架構圖 (Architecture Diagram)
+### 環境需求
+- Python 3.10+
+- Node.js 18+
+- MongoDB 6.0+
+
+### 安裝步驟
+
+```bash
+# 1. 複製專案
+git clone https://github.com/KevlnlOl7/114_tkuim_web.git
+cd 114_tkuim_web/114_tkuim_final_project
+
+# 2. 後端設定
+cd backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1  # Windows
+pip install -r ../requirements.txt
+
+# 3. 環境變數 (複製並編輯 .env)
+# Windows:
+copy .env.example .env
+
+# macOS / Linux:
+cp .env.example .env
+
+# 編輯 .env 設定 MONGODB_URL 和 SECRET_KEY
+
+# 產生 SECRET_KEY (可以使用以下 Python 指令)
+python -c "import secrets; print(secrets.token_hex(32))"
+
+# 4. 啟動後端
+uvicorn main:app --reload
+
+## 後端將運行於: `http://localhost:8000` (API 文件: `/docs`)
+
+# 5. 前端設定 (開新終端)
+cd frontend
+npm install
+npm run dev
+
+## 前端將運行於: `http://localhost:5173`
+```
+
+### 預設帳號
+| 角色 | 帳號 | 密碼 |
+|------|------|------|
+| 管理員 | `admin` | `admin` |
+
+---
+
+## 🏗 技術架構與流程
+
+### 1. 專案結構
+```
+PyMoney/
+├── backend/
+│   ├── main.py              # FastAPI 應用程式入口
+│   ├── database.py          # MongoDB 連線與索引
+│   ├── routers/             # API 路由模組
+│   │   ├── auth.py          # 認證相關
+│   │   ├── transactions.py  # 交易管理
+│   │   └── family.py        # 家庭功能
+│   ├── services/            # 業務邏輯層
+│   │   ├── auth_service.py
+│   │   └── transaction_service.py
+│   ├── middleware/          # 中間件
+│   │   └── rate_limit.py    # API 速率限制
+│   └── tests/               # 單元測試
+│       ├── test_auth_service.py
+│       └── test_transaction_service.py
+│
+└── frontend/
+    ├── src/
+    │   ├── App.vue          # 主應用程式
+    │   ├── api.js           # API 集中管理
+    │   ├── i18n.js          # 國際化設定
+    │   ├── components/      # Vue 元件
+    │   │   ├── LoginPage.vue
+    │   │   ├── TransactionForm.vue
+    │   │   ├── TrendChart.vue
+    │   │   └── ...
+    │   └── composables/     # 組合式 API
+    │       ├── useAuth.js
+    │       ├── useToast.js
+    │       └── useLoading.js
+    └── index.html
+```
+
+### 2. 系統架構圖
 
 ```mermaid
 graph TD
@@ -78,7 +187,7 @@ graph TD
     style MongoDB fill:#47A248,stroke:#333,stroke-width:2px,color:white
 ```
 
-### 2. CRUD 流程圖 (Data Flow)
+### 3. CRUD 流程圖
 
 ```mermaid
 sequenceDiagram
@@ -120,45 +229,14 @@ sequenceDiagram
 
 ---
 
-## 🚀 安裝與執行 (Installation)
+### 設計模式應用
 
-### 前置需求
-- Python 3.8+
-- Node.js 16+
-- MongoDB
-
-### 1. 後端設定 (Backend)
-
-```bash
-cd backend
-
-# 建立虛擬環境 (可選)
-python -m venv venv
-# Windows:
-.\venv\Scripts\activate
-# Mac/Linux:
-source venv/bin/activate
-
-# 安裝依賴
-pip install -r requirements.txt
-
-# 啟動伺服器
-python -m uvicorn main:app --reload
-```
-後端將運行於: `http://localhost:8000` (API 文件: `/docs`)
-
-### 2. 前端設定 (Frontend)
-
-```bash
-cd frontend
-
-# 安裝依賴
-npm install
-
-# 啟動開發伺服器
-npm run dev
-```
-前端將運行於: `http://localhost:5173`
+| 模式 | 應用場景 | 實現方式 |
+|------|----------|----------|
+| **Repository Pattern** | 資料存取抽象 | `database.py` 集中管理所有 MongoDB 操作 |
+| **Service Pattern** | 業務邏輯封裝 | `services/` 目錄下的服務模組 |
+| **Composable Pattern** | 前端狀態複用 | `composables/` 目錄下的組合式函數 |
+| **Factory Pattern** | 元件動態生成 | `LanguageSelector` 支援多種變體 |
 
 ---
 
@@ -167,7 +245,7 @@ npm run dev
 1. **註冊/登入**: 首次使用請先註冊帳號。
 2. **新增帳本**: 在首頁點擊「+」新增個人或共用帳本。
 3. **邀請成員**: 在帳本設定中產生邀請碼，讓家人加入。
-4. **開始記帳**: 點擊右下角「+」或使用匯入功能新增交易。
+4. **開始記帳**: 填入下方表格或使用匯入功能新增交易。
 5. **查看報表**: 點擊頂部的圖表切換至統計視圖。
 
 ---
